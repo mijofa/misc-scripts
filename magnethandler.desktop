@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=magnet-handler
+Comment=Email Magnet links to seedbox
+GenericName=Magnet link handler
+Exec=magnet-handler %U
+Terminal=false
+Type=Application
+MimeType=x-scheme-handler/magnet;
+NoDisplay=true
+
