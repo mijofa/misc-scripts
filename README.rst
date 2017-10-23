@@ -14,8 +14,11 @@ Installation
     xdg-desktop-menu install --novendor magnethandler.desktop
     xdg-mime default magnethandler.desktop x-scheme-handler/magnet  # 'magnethandler.desktop' here should never have a path, as it does not refer to the file in current directory but rather the file after installation in the previous line.
 
-find_win
-========
+find_win (OBSOLETE)
+===================
+OBSOLETE: When I wrote this script I did not realise $WINDOWID was a thing.
+          Turns out it would not have worked for me anyway because screen is bad with ENV, but I'm switching to tmux and it works now.
+
 Find the X window ID for the current shell. This doesn't work too well inside of screen.
 
 The use-case for this was so I could use wmctrl to switch to the window it's being run from without already knowing that.
@@ -24,7 +27,7 @@ notify-phone
 ============
 Use pushjet.io to notify my phone, this still requires some work and I intend to set up my own Pushjet server for use with this
 
-Update the PUSHJET_SECRET before using (search for "REPLACEME"
+Update the PUSHJET_SECRET before using (search for "REPLACEME")
 
 popup-notify
 ============
