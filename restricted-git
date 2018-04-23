@@ -2,7 +2,6 @@
 import os
 import shlex
 import sys
-import subprocess
 
 def normalise_git_dir(git_dir):
     """
@@ -39,6 +38,8 @@ assert 'SSH_ORIGINAL_COMMAND' in os.environ, "ERROR: This is meant to be run fro
 forced_git_dir = normalise_git_dir(sys.argv[1])
 
 ## Get the intended action
+# FIXME: Is shlex necessary or is the normal split good enough?
+#        I figured shlex would be more likely to do the right thing with regards to spaces in directory names and similar
 requested_cmd, requested_git_dir = shlex.split(os.environ['SSH_ORIGINAL_COMMAND'])
 
 ## Confirm it's a reasonable action

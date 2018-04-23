@@ -43,6 +43,6 @@ timer
 =====
 What I expect is a highly inefficient wrapper around sleep(1) which includes a countdown. Because I wanted some visibility of how long was left in longer running sleep commands.
 
-restricted-git-shell
-====================
+restricted-git
+==============
 This is to be run from in a forced SSH command for a given SSH key so that I can set up a single SSH key that only git on a single repo.
