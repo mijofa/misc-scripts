@@ -30,12 +30,21 @@ def normalise_git_dir(git_dir):
 
 
 ## Make sure we've been called with the correct lockdown parameters and such
-assert len(sys.argv) == 2, "ERROR: Must supply a single argument for git directory"
+assert 2 <= len(sys.argv) <= 3, "USAGE: {0} [--read-only] GIT_DIR".format(*sys.argv)
+if len(sys.argv) == 3:
+    assert sys.argv[1] == '--read-only', "ERROR: --read-only is the only support argument"
+    # Don't allow any commands used during 'git-push'
+    forced_cmds = ('git-receive-pack',)
+else:
+    # According to git-shell's manpage these are the only things git-shell runs out of the box
+    # FIXME: As far as I can tell, git-upload-archive doesn't get used when push/pulling so I've left that out
+    forced_cmds = ('git-receive-pack', 'git-upload-pack')
 assert 'SSH_ORIGINAL_COMMAND' in os.environ, "ERROR: This is meant to be run from SSH's AuthorizedKeysCommand"
+
 
 # FIXME: assert that this directory exists?
 #        I'm currently just letting git deal with that later
-forced_git_dir = normalise_git_dir(sys.argv[1])
+forced_git_dir = normalise_git_dir(sys.argv[-1])
 
 ## Get the intended action
 # FIXME: Is shlex necessary or is the normal split good enough?
@@ -43,9 +52,7 @@ forced_git_dir = normalise_git_dir(sys.argv[1])
 requested_cmd, requested_git_dir = shlex.split(os.environ['SSH_ORIGINAL_COMMAND'])
 
 ## Confirm it's a reasonable action
-# According to git-shell's manpage these are the only things git-shell runs out of the box
-# FIXME: As far as I can tell, git-upload-archive doesn't get used when push/pulling so I've left that out
-assert requested_cmd in ('git-receive-pack', 'git-upload-pack'), "DENIED: Not a recognised/allowed git-shell command"
+assert requested_cmd in forced_cmds, "DENIED: Not a recognised/allowed git-shell command"
 
 ## Confirm we're allowed to do it
 assert normalise_git_dir(requested_git_dir) == forced_git_dir, "DENIED: Not allowed to use that git directory"
