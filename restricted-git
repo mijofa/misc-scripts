@@ -51,4 +51,4 @@ assert requested_cmd in ('git-receive-pack', 'git-upload-pack'), "DENIED: Not a 
 assert normalise_git_dir(requested_git_dir) == forced_git_dir, "DENIED: Not allowed to use that git directory"
 
 ## Just do it
-os.execvp(requested_cmd, requested_cmd, forced_git_dir)
+os.execlp(requested_cmd, requested_cmd, forced_git_dir)
