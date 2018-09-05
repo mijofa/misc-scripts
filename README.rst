@@ -8,7 +8,8 @@ I've only used and tested this with an XFCE environment running Google Chrome/Ch
 Installation
 ------------
 1. Update the default SMTP-SERVER and RECIPIENT (search for "REPLACEME")
-2. Copy magnet-handler to somewhere in your $PATH
+2. Copy magnet-handler.py to somewhere in your $PATH
+   NOTE: Remove the '.py' extension when doing so
 4. Install the .desktop file into your environment::
 
     xdg-desktop-menu install --novendor magnethandler.desktop
