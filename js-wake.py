@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 import contextlib
+import subprocess
 import sys
 import time
 
-import Xlib.display
+#import Xlib.display
 
 # evdev Not available in Debian's repos, must come from pip3
 import evdev
@@ -29,7 +30,7 @@ def find_steam_controller():
 
 
 def watch_controller(dev_path):
-    XDisplay = Xlib.display.Display()
+#    XDisplay = Xlib.display.Display()
     try:
         with contextlib.closing(evdev.InputDevice(dev_path)) as js:
             print("Opened controller {vid:x}:{pid:x} {name}".format(vid=js.info.vendor, pid=js.info.product, name=js.name))
@@ -41,8 +42,10 @@ def watch_controller(dev_path):
                     last_nudge = time.monotonic()
                     if ev.type in (evdev.ecodes.EV_KEY, evdev.ecodes.EV_ABS, evdev.ecodes.EV_REL):
                         print('.', end='', flush=True)
-                        # FIXME: This only resets the screensaver if it's already active, it does not reset the timer.
-                        XDisplay.force_screen_saver(Xlib.X.ScreenSaverReset)  # Nudge the screensaver
+                        # FIXME: Don't keep forking out to xscreensaver-command, use libX11/libXSS somehow.
+                        subprocess.check_call(['xscreensaver-command', '-deactivate'], stdout=subprocess.DEVNULL)
+#                        # FIXME: This only resets the screensaver if it's already active, it does not reset the timer.
+#                        XDisplay.force_screen_saver(Xlib.X.ScreenSaverReset)  # Nudge the screensaver
                     elif ev.type in (evdev.ecodes.EV_SYN, ):
                         # I expect EV_SYN often, but I want to ignore it
                         pass
