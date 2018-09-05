@@ -46,3 +46,7 @@ What I expect is a highly inefficient wrapper around sleep(1) which includes a c
 restricted-git
 ==============
 This is to be run from in a forced SSH command for a given SSH key so that I can set up a single SSH key that only git on a single repo.
+
+js-wake
+=======
+This is intended to help solve the problem of Xscreensaver not staying awake when using a joystick/gamepad input.
