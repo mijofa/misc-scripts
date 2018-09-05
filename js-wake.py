@@ -14,39 +14,34 @@ import evdev
 VALVE_VENDOR_ID = '28DE'
 _TIMEOUT = 10
 
+DEBUG = False
+
 
 ### Xscreensaver functions ###
-def find_screensaver_window(dpy):
+def find_screensaver_window():
     screensavers = [child for child in dpy.screen().root.query_tree().children
                     if child.get_full_property(dpy.intern_atom("_SCREENSAVER_VERSION", False), Xlib.Xatom.STRING)]
     # FIXME: Use actual exceptions
     assert not len(screensavers) > 1, "Can't have multiple screensaver windows!"
     assert not len(screensavers) < 1, "No screensaver window found. Is there a screensaver running?"
-    # We don't want actually want a list, it was just the easiest way to loop over the query_tree
+    # We don't want actually want a list, it was just the easiest way to loop over the query_tree and assert only 1 window
     return screensavers[0]
 
 
-def send_xscreensaver_deactivate(window):
-    # FIXME: Set this event object once at start up and re-use it.
-    event = Xlib.protocol.event.ClientMessage(
-        display=dpy,
-        window=window,
-        client_type=dpy.intern_atom("SCREENSAVER", False),
-        # In the C code the last [0, 0] happened implicitly, Python's xlib doesn't cope well with them being left out though.
-        # The first [0, 0] was set according to certain other arguments, but for DEACTIVATE was always [0, 0]
-        data=(32, [dpy.intern_atom("DEACTIVATE", False), 0, 0, 0, 0]),
-    )
-
-    window.send_event(propagate=False,
-                      event_mask=0,
-                      event=event,
-                      onerror=lambda err: print('ERROR:', err, file=sys.stderr, flush=True))
+def send_xscreensaver_command(Xevent):
+    dpy.send_event(destination=Xevent.window,
+                   propagate=False,
+                   event_mask=0,
+                   event=Xevent,
+                   # FIXME: Should raise an exception here
+                   onerror=lambda err: print('ERROR:', err, file=sys.stderr, flush=True))
 
 
-def xscreensaver_response(window):
-    window.change_attributes(event_mask=Xlib.X.PropertyChangeMask)
-    timeout = time.time() + 1
-    while time.time() < timeout:
+def get_xscreensaver_response():
+    # NOTE: I've already set the necessary event mask for the xscreensaver window object to include Xlib.X.PropertyChangeMask
+    response = None  # So the assert below actually triggers rather than a UnboundLocalError
+    timeout = time.monotonic() + 1
+    while time.monotonic() < timeout:
         if dpy.pending_events():
             ev = dpy.next_event()
             if ev.type == Xlib.X.PropertyNotify and \
@@ -55,21 +50,19 @@ def xscreensaver_response(window):
                     # NOTE: The C code accepts AnyPropertyType, not just Strings, I'm being more defensive here.
                     # FIXME: Can there be multiple responses all at once? Should we wait the whole second and add them all up?
                     # FIXME: Can I just get the property info from the event object?
-                    response = window.get_full_property(dpy.intern_atom("_SCREENSAVER_RESPONSE", False), Xlib.Xatom.STRING)
+                    response = ev.window.get_full_property(dpy.intern_atom("_SCREENSAVER_RESPONSE", False), Xlib.Xatom.STRING)
                     break
     assert response, "No response recieved"
     return response.value
 
 
 def deactivate_screensaver():
-    window = find_screensaver_window(dpy)
-
-    send_xscreensaver_deactivate(window)
-    response = xscreensaver_response(dpy, window)
-    # I don't currently know what's an error and what's not, so add known messages to this list as they're seen.
-    # FIXME: Do we even get error responses via this method? If not, stop even checking and wasting resources
-    if response not in ("+not active: idle timer reset.",):
-        print('DEBUG, xscreensaver response:', response)
+    send_xscreensaver_command(ss_deactivate)
+    if DEBUG:
+        response = get_xscreensaver_response()
+        # I don't know whether we get errors via this method or not, but I don't think we do, so I'm ignoring them by default.
+        # I'd like to avoid unnecessary wait-loops, and in general use as few resources as possible ever run through the main loop
+        print('DEBUG xscreensaver response:', response)
 
 
 ### evdev functions ###
@@ -118,10 +111,23 @@ def watcher(dev_path):
 
 
 if __name__ == '__main__':
+    # FIXME: Go and write a python3-xscreensaver thing that can replicate the functionality of xscreensaver-command.c
     global dpy
     dpy = Xlib.display.Display()
+    global ss_window
+    ss_window = find_screensaver_window()
+    ss_window.change_attributes(event_mask=Xlib.X.PropertyChangeMask)
+    global ss_deactivate
+    ss_deactivate = Xlib.protocol.event.ClientMessage(
+        display=dpy,
+        window=ss_window,
+        client_type=dpy.intern_atom("SCREENSAVER", False),
+        # In the C code the last [0, 0] happened implicitly, Python's xlib doesn't cope well with them being left out though.
+        # The first [0, 0] was set according to certain other arguments, but for DEACTIVATE was always [0, 0]
+        data=(32, [dpy.intern_atom("DEACTIVATE", False), 0, 0, 0, 0]),
+    )
 
-    # FIXME: Take some sort of identifier on the command line, perhaps allow for triggering via udev (perhaps via os.environ)
+    # FIXME: Take some sort of identifier on the command line, perhaps allow for triggering via udev (identifying via os.environ?)
     #        If using a command-line identifier (not udev) also add the option to wait for the device with a timeout
     # FIXME: Or, use asyncio and handle all currently connected controllers concurrently
     #        NOTE: Would it only handle the ones connected on start up or could it also wait for new devices?
