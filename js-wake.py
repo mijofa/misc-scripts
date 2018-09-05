@@ -17,36 +17,24 @@ _TIMEOUT = 10
 
 ### Xscreensaver functions ###
 def find_screensaver_window(dpy):
-    root = dpy.screen().root
-    # remote.c called this "kids" but I prefer "children" so I'm giving up on that particular consistency.
-    # It's easier to see that children/child are 2 different variables than it is for kids/kid
-    children = root.query_tree().children
-    # remote.c had some extra error handling in case a child closed while iterating the list,
-    # but I think python-xlib does that for me.
-    for child in children:
-        # remote.c used the equivalent of "get_property", but I don't understand the extra arguments that takes.
-        status = child.get_full_property(XA_SCREENSAVER_VERSION, XA_STRING)
-        # Only the screensaver windows has this property
-        if status:
-            # FIXME: Add some error handling for finding multiple screensaver windows?
-            #        I don't think remote.c had that at all.
-            return child
-    # No screensaver window found
-    return None
+    screensavers = [child for child in dpy.screen().root.query_tree().children
+                    if child.get_full_property(dpy.intern_atom("_SCREENSAVER_VERSION", False), Xlib.Xatom.STRING)]
+    # FIXME: Use actual exceptions
+    assert not len(screensavers) > 1, "Can't have multiple screensaver windows!"
+    assert not len(screensavers) < 1, "No screensaver window found. Is there a screensaver running?"
+    # We don't want actually want a list, it was just the easiest way to loop over the query_tree
+    return screensavers[0]
 
 
-def send_xscreensaver_command(dpy, window, command, arg):
-    # There's some whole thing in remote.c that sometimes sets arg1 to a magic number and makes arg2 = arg.
-    # I dunno, I'm not using that functionality, but putting this here helps keep a little bit of consistency later.
-    arg1 = arg
-    arg2 = 0
-
+def send_xscreensaver_deactivate(window):
+    # FIXME: Set this event object once at start up and re-use it.
     event = Xlib.protocol.event.ClientMessage(
         display=dpy,
         window=window,
-        client_type=XA_SCREENSAVER,
+        client_type=dpy.intern_atom("SCREENSAVER", False),
         # In the C code the last [0, 0] happened implicitly, Python's xlib doesn't cope well with them being left out though.
-        data=(32, [command, arg1, arg2, 0, 0]),
+        # The first [0, 0] was set according to certain other arguments, but for DEACTIVATE was always [0, 0]
+        data=(32, [dpy.intern_atom("DEACTIVATE", False), 0, 0, 0, 0]),
     )
 
     window.send_event(propagate=False,
@@ -55,7 +43,7 @@ def send_xscreensaver_command(dpy, window, command, arg):
                       onerror=lambda err: print('ERROR:', err, file=sys.stderr, flush=True))
 
 
-def xscreensaver_command_response(dpy, window):
+def xscreensaver_response(window):
     window.change_attributes(event_mask=Xlib.X.PropertyChangeMask)
     timeout = time.time() + 1
     while time.time() < timeout:
@@ -63,34 +51,25 @@ def xscreensaver_command_response(dpy, window):
             ev = dpy.next_event()
             if ev.type == Xlib.X.PropertyNotify and \
                ev.state == Xlib.X.PropertyNewValue and \
-               ev.atom == XA_SCREENSAVER_RESPONSE:
+               ev.atom == dpy.intern_atom("_SCREENSAVER_RESPONSE", False):
                     # NOTE: The C code accepts AnyPropertyType, not just Strings, I'm being more defensive here.
                     # FIXME: Can there be multiple responses all at once? Should we wait the whole second and add them all up?
-                    response = window.get_full_property(XA_SCREENSAVER_RESPONSE, XA_STRING)
+                    # FIXME: Can I just get the property info from the event object?
+                    response = window.get_full_property(dpy.intern_atom("_SCREENSAVER_RESPONSE", False), Xlib.Xatom.STRING)
                     break
     assert response, "No response recieved"
     return response.value
 
 
-def xscreensaver_command(dpy, command, arg):
-    # FIXME: More of this should be run once on startup only.
-    #        I only wrote it this way originally because I wanted it to closely match the C code for readability
-    window = find_screensaver_window(dpy)
-    assert window, "No screensaver window found"
-
-    send_xscreensaver_command(dpy, window, command, arg)
-    status = xscreensaver_command_response(dpy, window)
-    # Add known messages to this list as they're noticed.
-    if status not in ("+not active: idle timer reset.",):
-        print('DEBUG, xscreensaver response:', status)
-
-
 def deactivate_screensaver():
-    # xscreensaver-command.c has these specified by the sys.argv[1:1]
-    # but I'm hard-coding them because I only care to support DEACTIVATE, for now.
-    cmd = XA_DEACTIVATE
-    arg = 0
-    xscreensaver_command(dpy, cmd, arg)
+    window = find_screensaver_window(dpy)
+
+    send_xscreensaver_deactivate(window)
+    response = xscreensaver_response(dpy, window)
+    # I don't currently know what's an error and what's not, so add known messages to this list as they're seen.
+    # FIXME: Do we even get error responses via this method? If not, stop even checking and wasting resources
+    if response not in ("+not active: idle timer reset.",):
+        print('DEBUG, xscreensaver response:', response)
 
 
 ### evdev functions ###
@@ -109,7 +88,7 @@ def find_steam_controller():
     return controllers
 
 
-def watch_controller(dev_path):
+def watcher(dev_path):
     try:
         with contextlib.closing(evdev.InputDevice(dev_path)) as js:
             print("Opened controller {vid:x}:{pid:x} {name}".format(vid=js.info.vendor, pid=js.info.product, name=js.name))
@@ -139,22 +118,17 @@ def watch_controller(dev_path):
 
 
 if __name__ == '__main__':
+    global dpy
     dpy = Xlib.display.Display()
 
-    # These should really be considered constants, and set just after the imports,
-    # but I can't set them until we have the display object, and we can't get a display object if not running in X11.
-    # So I'm not quite sure where the line between logic, and preset constants sits with these.
-    # FIXME: Note all the other Atom's that xscreensaver-command.c does just for completeness?
-    XA_SCREENSAVER = dpy.intern_atom("SCREENSAVER", False)
-    XA_SCREENSAVER_VERSION = dpy.intern_atom("_SCREENSAVER_VERSION", False)
-    XA_SCREENSAVER_RESPONSE = dpy.intern_atom("_SCREENSAVER_RESPONSE", False)
-    XA_DEACTIVATE = dpy.intern_atom("DEACTIVATE", False)
-    XA_STRING = Xlib.Xatom.STRING  # Mostly just for consistency
-
+    # FIXME: Take some sort of identifier on the command line, perhaps allow for triggering via udev (perhaps via os.environ)
+    #        If using a command-line identifier (not udev) also add the option to wait for the device with a timeout
+    # FIXME: Or, use asyncio and handle all currently connected controllers concurrently
+    #        NOTE: Would it only handle the ones connected on start up or could it also wait for new devices?
     devices = find_steam_controller()
     if len(devices) > 1:
         raise NotImplementedError("Only support 1 Valve event device at a time")
     elif len(devices) < 1:
         raise FileNotFoundError("Can't find any Valve event devices")
 
-    watch_controller(devices[0])
+    watcher(devices[0])
