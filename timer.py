@@ -36,10 +36,16 @@ delta = datetime.timedelta(seconds=interval)
 end_time = datetime.datetime.now() + delta
 print("Waiting for {delta}, until {end_time}".format(delta=delta, end_time=end_time))
 
-while end_time > datetime.datetime.now():
-    time.sleep(1)
-    print("\33[2K", end='\r')  # VT100 escape sequence to clear the current line
-    time_remaining = end_time - datetime.datetime.now()
-    # The default string formatted output of a timedelta object includes microseconds.
-    # I think I could use strftime, but I'm lazy so just going to split it on the '.'
-    print(time_remaining.split('.')[0], end='')
+try:
+    while end_time > datetime.datetime.now():
+        print("\33[2K", end='\r')  # VT100 escape sequence to clear the current line
+        time_remaining = str(end_time - datetime.datetime.now())
+        # The default string formatted output of a timedelta object includes microseconds.
+        # I think I could use strftime, but I'm lazy so just going to split it on the '.'
+        print(time_remaining.split('.')[0], flush=True, end='')
+        time.sleep(1)
+    print()
+except KeyboardInterrupt:
+    # Clear the line, and exit with an error status, but don't bother with printing an exception, it's annoying
+    print()
+    sys.exit(1)
