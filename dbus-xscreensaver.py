@@ -6,6 +6,8 @@
 # * org.freedesktop.ScreenSaver seemed a little more "standard" than org.gnome.ScreenSaver
 # * dbus-monitoring Chrome indicated it only targets org.freedesktop.ScreenSaver and that's the main thing I care about.
 
+# FIXME: Turn this into either a dbus or systemd service so that it starts up only when the relevant dbus interface is used.
+
 # FIXME: Currently this only allows controlling xscreensaver, and maybe some status querying.
 #        It does NOT support telling DBus when Xscreensaver state updates
 #
@@ -85,7 +87,7 @@ class XSS_worker():
                                 # FIXME: Should raise an exception here
                                 onerror=lambda err: print('ERROR:', err, file=sys.stderr, flush=True))
 
-        print("Sent command", atom_name)
+        print("Sent XSS command", atom_name)
         response = self._get_xscreensaver_response()
         print("XSS response:", response)
         return response
