@@ -34,6 +34,8 @@ import Xlib.protocol
 
 
 class XSS_worker():
+    inhibitor_is_running = False
+
     def __init__(self):
         self.inhibitors = []  # Must be set in the __init__ function because of list immutability
 
@@ -95,12 +97,11 @@ class XSS_worker():
     def add_inhibitor(self, inhibitor_id):
         assert inhibitor_id not in self.inhibitors, "Already working on that inhibitor"
         self.inhibitors.append(inhibitor_id)
-        if len(self.inhibitors) <= 1:
-            # If it's only 1 now, then there was none running before, better start one.
-
+        if not self.inhibitor_is_running:
             # AIUI the minimum xscreensaver timeout is 60s, so poke it every 50s.
             # NOTE: This is exactly what xdg-screensaver does
             GObject.timeout_add_seconds(50, self._inhibitor_func)
+            self.inhibitor_is_running = True
             # Because of Steam (at least) being stupid and constantly Inhibitting then UnInhibiting,
             # I'm not going to poke the screensaver immediatly because I don't want it to happen before the UnInhibit
             # # GObject's first run will be after the timeout has run once,
@@ -112,8 +113,10 @@ class XSS_worker():
         self.inhibitors.remove(inhibitor_id)
 
     def _inhibitor_func(self):
-        print("Inhibitor running")
+        print("Inhibitor running for", self.inhibitors)
         if len(self.inhibitors) == 0:
+            print("Stopping inhibitor")
+            self.inhibitor_is_running = False
             return False  # Stops the GObject timer
         else:
             self.send_command("DEACTIVATE")
