@@ -107,6 +107,7 @@ class XSS_worker():
             # # GObject's first run will be after the timeout has run once,
             # # so run it once immediately as well
             # self._inhibitor_func()
+            # FIXME: Add support for ignoring certain apps and reasons, mostly because of ^ that Steam shit.
 
     def del_inhibitor(self, inhibitor_id):
         assert inhibitor_id in self.inhibitors, "Already removed that inhibitor"
