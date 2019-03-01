@@ -63,3 +63,17 @@ Problem though is that xscreensaver doesn't implement a way for games/video-play
 That seems reasonable to me, with that approach if the inhibiting app crashes or loses contact then xscreensaver will lock a minute later, failing safe. However no apps actually bother implementing this because gnome-screensaver, light-locker, and other "alternative" screensavers implement a way of inhibiting the screensaver via DBus calls. Chrome/Chromium was the particular app that was getting on my nerves and triggered me to right this.
 
 This script is intended to be a compatibility layer between the org.freedesktop.ScreenSaver DBus calls and the xscreensaver-command functions, with a primary focus on supporting the Inibit/UnInhibit method by repeatedly simulating user input. It's not very pretty, and I admit that I'm probably reducing the security of my lockscreen by implementing such a thing, but it should still be safer than using an alternative.
+
+extract
+=======
+PROBLEMS
+--------
+1. Remembering the exact arguments for every single different archive extractor tar/zip/rar/etc
+2. Not knowing ahead of time whether the archive was a single directory full of stuff, or just a whole bunch of files in the root of the archive
+
+SOLUTION
+--------
+1. file-roller will "magically" figure out what extractor to use and use it. Downside is that it's a GUI, but I don't care enough.
+2. This script will extract into a tmp dir (in current directory to avoid filling /tmp) then count the entries in the root of that tmp dir:
+   * If it's more than 1, rename the tmp dir to the name of the archive (minus extension)
+   * If it's only 1, move it out to the current directory and delete the tmp dir.
