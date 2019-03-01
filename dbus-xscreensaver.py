@@ -114,9 +114,9 @@ class XSS_worker():
         self.inhibitors.remove(inhibitor_id)
 
     def _inhibitor_func(self):
-        print("Inhibitor running for", self.inhibitors)
+        # print("Inhibitor running for", self.inhibitors)
         if len(self.inhibitors) == 0:
-            print("Stopping inhibitor")
+            # print("Stopping inhibitor")
             self.inhibitor_is_running = False
             return False  # Stops the GObject timer
         else:
@@ -192,14 +192,14 @@ class DBusListener(dbus.service.Object):
         # NOTE: I could start at 0, but I've decided not to for easier debugging
         inhibitor_id = random.randint(1, 4294967296)
         self.action_handler.add_inhibitor(inhibitor_id)
-        print('Inhibit called by {caller} for reason "{reason}". Given ID {ID}'.format(
-            caller=caller, reason=reason, ID=inhibitor_id))
+        # print('Inhibit called by {caller} for reason "{reason}". Given ID {ID}'.format(
+        #     caller=caller, reason=reason, ID=inhibitor_id))
         return dbus.UInt32(inhibitor_id)
 
     @dbus.service.method("org.freedesktop.ScreenSaver")
     def UnInhibit(self, inhibitor_id):
         self.action_handler.del_inhibitor(inhibitor_id)
-        print("UnInhibit called for inhibitor", int(inhibitor_id))
+        # print("UnInhibit called for inhibitor", int(inhibitor_id))
 
 
 if __name__ == '__main__':
