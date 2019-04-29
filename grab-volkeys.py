@@ -13,8 +13,10 @@ VOLMUTE = 269025042
 def processevents(dpy, reply):
     # I don't understand why all these IFs are here, I stole it from:
     # https://github.com/chrisspen/freekey/blob/master/freekey/pyxhook.py
-    if reply.category != record.FromServer: return
-    if reply.client_swapped: return
+    if reply.category != record.FromServer:
+        return
+    if reply.client_swapped:
+        return
 #    if not len(reply.data) or ord(reply.data[0]) < 2: return
 
     data = reply.data
