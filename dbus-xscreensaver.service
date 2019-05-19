@@ -1,0 +1,17 @@
+[Unit]
+Description=DBUS xscreensaver compatibility layer
+After=dbus.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+SyslogIdentifier=dbus-xscreensaver
+ExecStart=%h/vcs/misc-scripts/dbus-xscreensaver.py
+
+## FIXME: these are copied from most of PrisonPC's systemd jobs, but apparently are "NOT APPROPRIATE for" any of them
+Restart=on-failure
+RestartSec=30s
+StartLimitBurst=0
+
+[Install]
+WantedBy=default.target
