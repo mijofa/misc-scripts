@@ -89,10 +89,7 @@ class XSS_worker():
                                 # FIXME: Should raise an exception here
                                 onerror=lambda err: print('ERROR:', err, file=sys.stderr, flush=True))
 
-        print("Sent XSS command", atom_name)
-        response = self._get_xscreensaver_response()
-        print("XSS response:", response)
-        return response
+        return self._get_xscreensaver_response()
 
     def add_inhibitor(self, inhibitor_id):
         assert inhibitor_id not in self.inhibitors, "Already working on that inhibitor"
@@ -120,7 +117,9 @@ class XSS_worker():
             self.inhibitor_is_running = False
             return False  # Stops the GObject timer
         else:
-            self.send_command("DEACTIVATE")
+            response = self.send_command("DEACTIVATE")
+            if response != '+not active: idle timer reset.':
+                print("XSS response:", response, file=sys.stderr, flush=True)
             return True
 
 
