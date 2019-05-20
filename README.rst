@@ -64,6 +64,24 @@ That seems reasonable to me, with that approach if the inhibiting app crashes or
 
 This script is intended to be a compatibility layer between the org.freedesktop.ScreenSaver DBus calls and the xscreensaver-command functions, with a primary focus on supporting the Inibit/UnInhibit method by repeatedly simulating user input. It's not very pretty, and I admit that I'm probably reducing the security of my lockscreen by implementing such a thing, but it should still be safer than using an alternative.
 
+FIXME: Somehow get the PID of the D-BUS caller and cancel the inhibitor if that PID dies.
+
+Install as a systemd user service
+---------------------------------
+NOTE: If you don't have this repo cloned in ~/vcs/misc-scripts then you'll need to change the .service file a little. I'll leave that as an exercise for th reader
+
+* Symlink dbus-xscreensaver.service into ~/.config/systemd/user/
+* Then symlink ~/.config/systemd/user/dbus-xscreensaver.service into ~/.config/systemd/user/default.target.wants
+  NOTE: You can't skip either of these steps, I know, it's stupid, welcome to systemd
+* Reload the systemd user daemon
+* Start the systemd service
+
+Or just run this::
+    ln -s ~/vcs/misc-scripts/dbus-xscreensaver.service ~/.config/systemd/user/
+    ln -s ../dbus-xscreensaver.service ~/.config/systemd/user/default.target.wants
+    systemctl --user daemon-reload
+    systemctl --user start dbus-xscreensaver
+
 extract
 =======
 PROBLEMS
