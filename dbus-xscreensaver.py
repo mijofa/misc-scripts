@@ -45,7 +45,9 @@ class XSS_worker():
         screensavers = [child for child in self.display.screen().root.query_tree().children
                         if child.get_full_property(self.display.intern_atom("_SCREENSAVER_VERSION", False), Xlib.Xatom.STRING)]
         # FIXME: Use actual exceptions
-        assert not len(screensavers) > 1, "Can't have multiple screensaver windows!"
+        ## Actually we can have multiple screensaver windows because there's 1 for each output display.
+        ## xscreensaver-command stops at the first one it finds, so we'll do the same.
+        # assert not len(screensavers) > 1, "Can't have multiple screensaver windows!"
         assert not len(screensavers) < 1, "No screensaver window found. Is there a screensaver running?"
         # Don't actually want a list, it was just the easiest way to loop over the query_tree and assert only 1 window
         self.xss_window = screensavers[0]
