@@ -37,7 +37,7 @@ class XSS_worker():
     inhibitor_is_running = False
 
     def __init__(self):
-        self.inhibitors = []  # Must be set in the __init__ function because of list immutability
+        self.inhibitors = {}  # Must be set in the __init__ function because of list immutability
 
         self.display = Xlib.display.Display()
 
@@ -93,9 +93,11 @@ class XSS_worker():
 
         return self._get_xscreensaver_response()
 
-    def add_inhibitor(self, inhibitor_id):
+    def add_inhibitor(self, inhibitor_id, metadata):
         assert inhibitor_id not in self.inhibitors, "Already working on that inhibitor"
-        self.inhibitors.append(inhibitor_id)
+        self.inhibitors.append({inhibitor_id: metadata})
+        print('Added inhibitor for "{metadata}". Given ID {ID}'.format(
+            metadata=metadata, ID=inhibitor_id), file=sys.stderr, flush=True)
         if not self.inhibitor_is_running:
             # AIUI the minimum xscreensaver timeout is 60s, so poke it every 50s.
             # NOTE: This is exactly what xdg-screensaver does
@@ -111,10 +113,11 @@ class XSS_worker():
 
     def del_inhibitor(self, inhibitor_id):
         assert inhibitor_id in self.inhibitors, "Already removed that inhibitor"
-        self.inhibitors.remove(inhibitor_id)
+        print('Removed inhibitor for "{metadata}". Given ID {ID}'.format(
+            metadata=self.inhibitors.pop(inhibitor_id), ID=inhibitor_id), file=sys.stderr, flush=True)
 
     def _inhibitor_func(self):
-        # print("Inhibitor running for", self.inhibitors)
+        print("Poking screensaver for inhibitors:", self.inhibitors, file=sys.stderr, flush=True)
         if len(self.inhibitors) == 0:
             # print("Stopping inhibitor")
             self.inhibitor_is_running = False
@@ -193,9 +196,7 @@ class DBusListener(dbus.service.Object):
         # Since DBus uses 32bit integers, make sure isn't any larger than that
         # NOTE: I could start at 0, but I've decided not to for easier debugging
         inhibitor_id = random.randint(1, 4294967296)
-        self.action_handler.add_inhibitor(inhibitor_id)
-        # print('Inhibit called by {caller} for reason "{reason}". Given ID {ID}'.format(
-        #     caller=caller, reason=reason, ID=inhibitor_id))
+        self.action_handler.add_inhibitor(inhibitor_id, (caller, reason))
         return dbus.UInt32(inhibitor_id)
 
     @dbus.service.method("org.freedesktop.ScreenSaver")
