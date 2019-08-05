@@ -99,7 +99,8 @@ class XSS_worker():
         if not self.inhibitor_is_running:
             # AIUI the minimum xscreensaver timeout is 60s, so poke it every 50s.
             # NOTE: This is exactly what xdg-screensaver does
-            GObject.timeout_add_seconds(50, self._inhibitor_func)
+            # UPDATE: Changed to 30 seconds because there was some (very rare) circumstances were it skipped 1 poke
+            GObject.timeout_add_seconds(30, self._inhibitor_func)
             self.inhibitor_is_running = True
             # Because of Steam (at least) being stupid and constantly Inhibitting then UnInhibiting,
             # I'm not going to poke the screensaver immediatly because I don't want it to happen before the UnInhibit
