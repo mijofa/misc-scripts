@@ -144,12 +144,15 @@ class XSS_worker():
             self.inhibitor_is_running = False
             return False  # Stops the GObject timer
         else:
-            # FIXME: This should not poke if the screensaver is active/locked.
-            #        Perhaps should also invalidate all inhibitors at the same time?
-            print("Poking screensaver for inhibitors:", self.inhibitors, file=sys.stderr, flush=True)
-            response = self.send_command("DEACTIVATE")
-            if response != '+not active: idle timer reset.':
-                print("XSS response:", response, file=sys.stderr, flush=True)
+            if self.get_active():
+                # Screen currently locked/blanked, don't poke it.
+                # FIXME: Perhaps should also invalidate all active inhibitors?
+                pass
+            else:
+                print("Poking screensaver for inhibitors:", self.inhibitors, file=sys.stderr, flush=True)
+                response = self.send_command("DEACTIVATE")
+                if response != '+not active: idle timer reset.':
+                    print("XSS response:", response, file=sys.stderr, flush=True)
             return True
 
 
