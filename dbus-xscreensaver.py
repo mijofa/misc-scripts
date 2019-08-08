@@ -95,7 +95,7 @@ class XSS_worker():
 
     def add_inhibitor(self, inhibitor_id, metadata):
         assert inhibitor_id not in self.inhibitors, "Already working on that inhibitor"
-        self.inhibitors.append({inhibitor_id: metadata})
+        self.inhibitors.update({inhibitor_id: metadata})
         print('Added inhibitor for "{metadata}". Given ID {ID}'.format(
             metadata=metadata, ID=inhibitor_id), file=sys.stderr, flush=True)
         if not self.inhibitor_is_running:
