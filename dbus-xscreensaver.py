@@ -23,8 +23,8 @@ import psutil
 #        Should I use that to reduce dependencies?
 import dbus
 import dbus.service
-import dbus.glib  # Needed for the mainloop to work with GObject
-from gi.repository import GObject
+import dbus.mainloop.glib
+from gi.repository import GLib
 
 # FIXME: Xlib is obsolete and should be replaced.
 #        I guess technically it'd be replaced by DBus,
@@ -103,7 +103,7 @@ class XSS_worker():
             # AIUI the minimum xscreensaver timeout is 60s, so poke it every 50s.
             # NOTE: This is exactly what xdg-screensaver does
             # UPDATE: Changed to 30 seconds because there was some (very rare) circumstances were it skipped 1 poke
-            GObject.timeout_add_seconds(30, self._inhibitor_func)
+            GLib.timeout_add_seconds(30, self._inhibitor_func)
             self.inhibitor_is_running = True
             # Because of Steam (at least) being stupid and constantly Inhibitting then UnInhibiting,
             # I'm not going to poke the screensaver immediatly because I don't want it to happen before the UnInhibit
@@ -222,5 +222,6 @@ class DBusListener(dbus.service.Object):
 
 
 if __name__ == '__main__':
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     DBusListener(XSS_worker())  # The object this returns is useless because it'll get dealt with by GObject
-    GObject.MainLoop().run()
+    GLib.MainLoop().run()
