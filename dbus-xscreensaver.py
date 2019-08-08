@@ -87,7 +87,6 @@ class XSS_worker():
             return False
 
     def send_command(self, atom_name):
-        print(atom_name)
         Xevent = Xlib.protocol.event.ClientMessage(
             display=self.display,
             window=self.xss_window,
@@ -108,8 +107,9 @@ class XSS_worker():
     def add_inhibitor(self, inhibitor_id: int, caller: dbus.String, reason: dbus.String, caller_process: psutil.Process):
         assert inhibitor_id not in self.inhibitors, "Already working on that inhibitor"
         self.inhibitors.update({inhibitor_id: {'caller': caller, 'reason': reason, 'caller_process': caller_process}})
-        print('Added inhibitor for "{caller}". Given ID {ID}'.format(
-            caller=caller, ID=inhibitor_id), file=sys.stderr, flush=True)
+        print('Inhibitor requested by "{caller}" ({process_name}) for reason "{reason}". Given ID {ID}'.format(
+                  caller=caller, reason=reason, ID=inhibitor_id, process_name=caller_process.name()),  # noqa: E126
+              file=sys.stderr, flush=True)
         if not self.inhibitor_is_running:
             # AIUI the minimum xscreensaver timeout is 60s, so poke it every 50s.
             # NOTE: This is exactly what xdg-screensaver does
