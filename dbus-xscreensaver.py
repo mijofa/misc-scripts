@@ -76,7 +76,18 @@ class XSS_worker():
         assert response, "No response recieved"
         return response.value
 
+    def get_active(self):
+        status = self.display.screen().root.get_full_property(
+            self.display.intern_atom("_SCREENSAVER_STATUS", False), Xlib.Xatom.INTEGER).value
+        blanked = status[0]
+        # tt = status[1]  # Something to do with the time since blanked/unblanked, not implemented here yet
+        if blanked in (self.display.intern_atom("BLANK", False), self.display.intern_atom("LOCK", False)):
+            return True
+        else:
+            return False
+
     def send_command(self, atom_name):
+        print(atom_name)
         Xevent = Xlib.protocol.event.ClientMessage(
             display=self.display,
             window=self.xss_window,
@@ -160,8 +171,7 @@ class DBusListener(dbus.service.Object):
     @dbus.service.method("org.freedesktop.ScreenSaver")
     def GetActive(self):
         """Query the state of the locker"""
-        # "grep" xscreenssaver-command -time for "non-blanked" and reverse the bool
-        return dbus.Boolean(False)
+        return dbus.Boolean(self.action_handler.get_active())
 
     @dbus.service.method("org.freedesktop.ScreenSaver")
     def GetActiveTime(self):
