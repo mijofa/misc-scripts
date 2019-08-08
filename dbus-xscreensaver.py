@@ -17,6 +17,7 @@
 import random
 import sys
 import time
+import psutil
 
 # FIXME: Can gi.repository.DBus get the same functionality?
 #        Should I use that to reduce dependencies?
@@ -93,11 +94,11 @@ class XSS_worker():
 
         return self._get_xscreensaver_response()
 
-    def add_inhibitor(self, inhibitor_id, metadata):
+    def add_inhibitor(self, inhibitor_id: int, caller: dbus.String, reason: dbus.String, caller_process: psutil.Process):
         assert inhibitor_id not in self.inhibitors, "Already working on that inhibitor"
-        self.inhibitors.update({inhibitor_id: metadata})
-        print('Added inhibitor for "{metadata}". Given ID {ID}'.format(
-            metadata=metadata, ID=inhibitor_id), file=sys.stderr, flush=True)
+        self.inhibitors.update({inhibitor_id: {'caller': caller, 'reason': reason, 'caller_process': caller_process}})
+        print('Added inhibitor for "{caller}". Given ID {ID}'.format(
+            caller=caller, ID=inhibitor_id), file=sys.stderr, flush=True)
         if not self.inhibitor_is_running:
             # AIUI the minimum xscreensaver timeout is 60s, so poke it every 50s.
             # NOTE: This is exactly what xdg-screensaver does
@@ -113,16 +114,26 @@ class XSS_worker():
 
     def del_inhibitor(self, inhibitor_id):
         assert inhibitor_id in self.inhibitors, "Already removed that inhibitor"
-        print('Removed inhibitor for "{metadata}". Given ID {ID}'.format(
-            metadata=self.inhibitors.pop(inhibitor_id), ID=inhibitor_id), file=sys.stderr, flush=True)
+        print('Removed inhibitor for "{caller}" with ID {ID}'.format(
+            caller=self.inhibitors.pop(inhibitor_id)['caller'], ID=inhibitor_id), file=sys.stderr, flush=True)
 
     def _inhibitor_func(self):
-        print("Poking screensaver for inhibitors:", self.inhibitors, file=sys.stderr, flush=True)
+        # This for loop must run on a copy of the dict so that it can pop things from the original dict.
+        # Otherwise the for loop crashes with "RuntimeError: dictionary changed size during iteration"
+        for inhibitor_id in self.inhibitors.copy():
+            # NOTE: psutil confirms the pid hasn't been reused, so don't need to worry about that.
+            print(self.inhibitors[inhibitor_id])
+            if not self.inhibitors[inhibitor_id]['caller_process'].is_running():
+                print("Inhibitor {inhibitor_id} ({caller}) died without uninhibiting, killing inhibitor".format(
+                      inhibitor_id=inhibitor_id, caller=self.inhibitors[inhibitor_id]['caller']))
+                self.inhibitors.pop(inhibitor_id)
+
         if len(self.inhibitors) == 0:
-            # print("Stopping inhibitor")
+            print("Inhibitors finished")
             self.inhibitor_is_running = False
             return False  # Stops the GObject timer
         else:
+            print("Poking screensaver for inhibitors:", self.inhibitors, file=sys.stderr, flush=True)
             response = self.send_command("DEACTIVATE")
             if response != '+not active: idle timer reset.':
                 print("XSS response:", response, file=sys.stderr, flush=True)
@@ -138,6 +149,10 @@ class DBusListener(dbus.service.Object):
         bus_name = dbus.service.BusName("org.freedesktop.ScreenSaver", bus=session_bus)
         # FIXME: Also trigger for /org/gnome/ScreenSaver
         super().__init__(bus_name, '/org/freedesktop/ScreenSaver')
+
+        # The only way I could find to get the process ID (or any useful info) of the dbus caller was to make a separate dbus call.
+        # This is just to avoid needing to initialise another bus connection, etc.
+        self._get_procid = session_bus.get_object('org.freedesktop.DBus', '/').GetConnectionUnixProcessID
 
     # FIXME: Status querying of Xscreensaver is differently complicated, solve that another time
     @dbus.service.method("org.freedesktop.ScreenSaver")
@@ -182,8 +197,8 @@ class DBusListener(dbus.service.Object):
         """Poke the running locker to simulate user activity"""
         self.action_handler.send_command("DEACTIVATE")
 
-    @dbus.service.method("org.freedesktop.ScreenSaver")
-    def Inhibit(self, caller, reason):
+    @dbus.service.method("org.freedesktop.ScreenSaver", sender_keyword='dbus_sender')
+    def Inhibit(self, caller: dbus.String, reason: dbus.String, dbus_sender: str):
         """Inhibit the screensaver from activating. Terminate the light-locker-command process to end inhibition."""
         # This gets more complicated with a need to repeatedly "poke" xscreensaver because there is no inhibitor built into it.
         # NOTE: xdg-screensaver already has this working, perhaps just reuse that
@@ -196,7 +211,8 @@ class DBusListener(dbus.service.Object):
         # Since DBus uses 32bit integers, make sure isn't any larger than that
         # NOTE: I could start at 0, but I've decided not to for easier debugging
         inhibitor_id = random.randint(1, 4294967296)
-        self.action_handler.add_inhibitor(inhibitor_id, (caller, reason))
+        self.action_handler.add_inhibitor(inhibitor_id, caller=caller, reason=reason,
+                                          caller_process=psutil.Process(self._get_procid(dbus_sender)))
         return dbus.UInt32(inhibitor_id)
 
     @dbus.service.method("org.freedesktop.ScreenSaver")
