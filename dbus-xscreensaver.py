@@ -133,6 +133,8 @@ class XSS_worker():
             self.inhibitor_is_running = False
             return False  # Stops the GObject timer
         else:
+            # FIXME: This should not poke if the screensaver is active/locked.
+            #        Perhaps should also invalidate all inhibitors at the same time?
             print("Poking screensaver for inhibitors:", self.inhibitors, file=sys.stderr, flush=True)
             response = self.send_command("DEACTIVATE")
             if response != '+not active: idle timer reset.':
@@ -210,6 +212,7 @@ class DBusListener(dbus.service.Object):
 
         # Since DBus uses 32bit integers, make sure isn't any larger than that
         # NOTE: I could start at 0, but I've decided not to for easier debugging
+        # FIXME: This won't handle randomly generating duplicates
         inhibitor_id = random.randint(1, 4294967296)
         self.action_handler.add_inhibitor(inhibitor_id, caller=caller, reason=reason,
                                           caller_process=psutil.Process(self._get_procid(dbus_sender)))
