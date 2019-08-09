@@ -133,7 +133,6 @@ class XSS_worker():
         # Otherwise the for loop crashes with "RuntimeError: dictionary changed size during iteration"
         for inhibitor_id in self.inhibitors.copy():
             # NOTE: psutil confirms the pid hasn't been reused, so don't need to worry about that.
-            print(self.inhibitors[inhibitor_id])
             if not self.inhibitors[inhibitor_id]['caller_process'].is_running():
                 print("Inhibitor {inhibitor_id} ({caller}) died without uninhibiting, killing inhibitor".format(
                       inhibitor_id=inhibitor_id, caller=self.inhibitors[inhibitor_id]['caller']))
@@ -149,7 +148,9 @@ class XSS_worker():
                 # FIXME: Perhaps should also invalidate all active inhibitors?
                 pass
             else:
-                print("Poking screensaver for inhibitors:", self.inhibitors, file=sys.stderr, flush=True)
+                print("Poking screensaver for inhibitors:",
+                      ', '.join([i['caller'] for i in self.inhibitors.values()]),
+                      file=sys.stderr, flush=True)
                 response = self.send_command("DEACTIVATE")
                 if response != '+not active: idle timer reset.':
                     print("XSS response:", response, file=sys.stderr, flush=True)
