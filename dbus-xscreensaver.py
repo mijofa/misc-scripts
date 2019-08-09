@@ -6,13 +6,15 @@
 # * org.freedesktop.ScreenSaver seemed a little more "standard" than org.gnome.ScreenSaver
 # * dbus-monitoring Chrome indicated it only targets org.freedesktop.ScreenSaver and that's the main thing I care about.
 
-# FIXME: Turn this into either a dbus or systemd service so that it starts up only when the relevant dbus interface is used.
-
 # FIXME: Currently this only allows controlling xscreensaver, and maybe some status querying.
 #        It does NOT support telling DBus when Xscreensaver state updates
 #
 #        I would like to improve this in future to implement xscreensaver-command's -watch functionality
 #        and emit DBus messages accordingly
+
+# FIXME: Facebook's gifs are played using the <video> element, which causes Chrome to repeatedly inhibit the screensaver.
+#        Only solution I can think of for this would be to just not start the inhibitor process until 30-ish seconds after Chrome triggers it.
+#        This is an ugly solution, but I can't think of any better.
 
 import random
 import sys
