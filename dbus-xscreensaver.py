@@ -35,7 +35,7 @@ import Xlib.protocol
 
 
 class XSS_worker():
-    inhibitor_is_running = False
+    timeout_source_id = None
 
     def __init__(self):
         self.inhibitors = {}  # Must be set in the __init__ function because of list immutability
@@ -110,12 +110,11 @@ class XSS_worker():
         print('Inhibitor requested by "{caller}" ({process_name}) for reason "{reason}". Given ID {ID}'.format(
                   caller=caller, reason=reason, ID=inhibitor_id, process_name=caller_process.name()),  # noqa: E126
               file=sys.stderr, flush=True)
-        if not self.inhibitor_is_running:
+        if self.timeout_source_id is None:
             # AIUI the minimum xscreensaver timeout is 60s, so poke it every 50s.
             # NOTE: This is exactly what xdg-screensaver does
             # UPDATE: Changed to 30 seconds because there was some (very rare) circumstances were it skipped 1 poke
-            GLib.timeout_add_seconds(30, self._inhibitor_func)
-            self.inhibitor_is_running = True
+            self.timeout_source_id = GLib.timeout_add_seconds(30, self._inhibitor_func)
             # Because of Steam (at least) being stupid and constantly Inhibitting then UnInhibiting,
             # I'm not going to poke the screensaver immediatly because I don't want it to happen before the UnInhibit
             # # GObject's first run will be after the timeout has run once,
@@ -127,6 +126,10 @@ class XSS_worker():
         assert inhibitor_id in self.inhibitors, "Already removed that inhibitor"
         print('Removed inhibitor for "{caller}" with ID {ID}'.format(
             caller=self.inhibitors.pop(inhibitor_id)['caller'], ID=inhibitor_id), file=sys.stderr, flush=True)
+        if len(self.inhibitors) == 0 and self.timeout_source_id is not None:
+            print('Stopping inhibitor timeout')
+            GLib.remove(self.timeout_source_id)
+            self.timeout_source_id = None
 
     def _inhibitor_func(self):
         # This for loop must run on a copy of the dict so that it can pop things from the original dict.
@@ -141,7 +144,7 @@ class XSS_worker():
 
         if len(self.inhibitors) == 0:
             print("Inhibitors finished")
-            self.inhibitor_is_running = False
+            self.timeout_source_id = None
             return False  # Stops the GObject timer
         else:
             if self.get_active():
@@ -170,7 +173,6 @@ class DBusListener(dbus.service.Object):
         # This is just to avoid needing to initialise another bus connection, etc.
         self._get_procid = session_bus.get_object('org.freedesktop.DBus', '/').GetConnectionUnixProcessID
 
-    # FIXME: Status querying of Xscreensaver is differently complicated, solve that another time
     @dbus.service.method("org.freedesktop.ScreenSaver")
     def GetActive(self):
         """Query the state of the locker"""
