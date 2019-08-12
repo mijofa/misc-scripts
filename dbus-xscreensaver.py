@@ -6,13 +6,15 @@
 # * org.freedesktop.ScreenSaver seemed a little more "standard" than org.gnome.ScreenSaver
 # * dbus-monitoring Chrome indicated it only targets org.freedesktop.ScreenSaver and that's the main thing I care about.
 
-# FIXME: Turn this into either a dbus or systemd service so that it starts up only when the relevant dbus interface is used.
-
 # FIXME: Currently this only allows controlling xscreensaver, and maybe some status querying.
 #        It does NOT support telling DBus when Xscreensaver state updates
 #
 #        I would like to improve this in future to implement xscreensaver-command's -watch functionality
 #        and emit DBus messages accordingly
+
+# FIXME: Facebook's gifs are played using the <video> element, which causes Chrome to repeatedly inhibit the screensaver.
+#        Only solution I can think of for this would be to just not start the inhibitor process until 30-ish seconds after Chrome triggers it.
+#        This is an ugly solution, but I can't think of any better.
 
 import random
 import sys
@@ -136,7 +138,6 @@ class XSS_worker():
         # Otherwise the for loop crashes with "RuntimeError: dictionary changed size during iteration"
         for inhibitor_id in self.inhibitors.copy():
             # NOTE: psutil confirms the pid hasn't been reused, so don't need to worry about that.
-            print(self.inhibitors[inhibitor_id])
             if not self.inhibitors[inhibitor_id]['caller_process'].is_running():
                 print("Inhibitor {inhibitor_id} ({caller}) died without uninhibiting, killing inhibitor".format(
                       inhibitor_id=inhibitor_id, caller=self.inhibitors[inhibitor_id]['caller']))
@@ -152,7 +153,9 @@ class XSS_worker():
                 # FIXME: Perhaps should also invalidate all active inhibitors?
                 pass
             else:
-                print("Poking screensaver for inhibitors:", self.inhibitors, file=sys.stderr, flush=True)
+                print("Poking screensaver for inhibitors:",
+                      ', '.join([i['caller'] for i in self.inhibitors.values()]),
+                      file=sys.stderr, flush=True)
                 response = self.send_command("DEACTIVATE")
                 if response != '+not active: idle timer reset.':
                     print("XSS response:", response, file=sys.stderr, flush=True)

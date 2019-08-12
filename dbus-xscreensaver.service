@@ -1,10 +1,11 @@
 [Unit]
 Description=DBUS xscreensaver compatibility layer
-After=dbus.service
 PartOf=graphical-session.target
 
 [Service]
-Type=simple
+# FIXME: Can this be turned into a bus-activatable service?
+Type=dbus
+BusName=org.freedesktop.ScreenSaver
 SyslogIdentifier=dbus-xscreensaver
 # Python3 defaults to quite a large buffer for stdout/stderr.
 # This makes the journal significantly less useful for debugging because the log messages don't appear immediately.
