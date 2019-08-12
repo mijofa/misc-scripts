@@ -145,7 +145,7 @@ class XSS_worker():
         if len(self.inhibitors) == 0:
             print("Inhibitors finished")
             self.timeout_source_id = None
-            return False  # Stops the GObject timer
+            return GLib.SOURCE_REMOVE
         else:
             if self.get_active():
                 # Screen currently locked/blanked, don't poke it.
@@ -156,7 +156,7 @@ class XSS_worker():
                 response = self.send_command("DEACTIVATE")
                 if response != '+not active: idle timer reset.':
                     print("XSS response:", response, file=sys.stderr, flush=True)
-            return True
+            return GLib.SOURCE_CONTINUE
 
 
 class DBusListener(dbus.service.Object):
