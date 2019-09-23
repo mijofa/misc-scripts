@@ -77,6 +77,7 @@ NOTE: If you don't have this repo cloned in ~/vcs/misc-scripts then you'll need 
 * Start the systemd service
 
 Or just run this::
+
     ln -s ~/vcs/misc-scripts/dbus-xscreensaver.service ~/.config/systemd/user/
     ln -s ../dbus-xscreensaver.service ~/.config/systemd/user/default.target.wants
     systemctl --user daemon-reload
