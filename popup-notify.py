@@ -39,8 +39,8 @@ response = dialog.run()
 dialog.destroy()
 
 if response in possible_responses:
-    print possible_responses[possible_responses.index(response)].value_nick
+    print(possible_responses[possible_responses.index(response)].value_nick)
 else:
-    print "Unrecognized response."
+    print("Unrecognized response.")
 
 sys.exit(response*-1)
