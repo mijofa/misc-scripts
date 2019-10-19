@@ -7,19 +7,9 @@ import sys
 import time
 import urllib.request
 
-print("Updating temperature of lights", sys.argv, file=sys.stderr, flush=True)
-# Redshift runs this *before* setting the gamma values in X11, so we need to fork and detach so that Redshift can continue,
-# then wait ~3 seconds for Redshift to finish before querying X11
-#
-# Dual-fork technique adapted from: https://stackoverflow.com/questions/19369671/launching-a-daemon-from-python-then-detaching-the-parent-from-the-child
-if os.fork() > 0:
-    sys.exit()
-os.setsid()
-if os.fork() > 0:
-    sys.exit()
+import psutil
 
-time.sleep(4)
-
+# FIXME: Config or cmdline switch this
 sonoff_hostname = 'sonoff-6810'
 
 
@@ -41,19 +31,41 @@ def get_randr_rgb_diff():
     return r, g, b
 
 
-base_color_intensity = 160
-red, green, blue = (math.floor(base_color_intensity + (base_color_intensity * c)) for c in get_randr_rgb_diff())
+# Thrown behind an if statement because testing & debugging was getting annoying with this
+if psutil.Process(psutil.Process().ppid()).cmdline()[0].endswith('redshift'):
+    # Redshift eats stdout, but I want some logging via the systemd journal so use stderr instead
+    output_file = sys.stderr
+    print("Forking light controller", sys.argv, file=output_file)
+
+    # Redshift runs this *before* setting the gamma values in X11, so we need to fork and detach so that Redshift can continue,
+    # then wait ~3 seconds for Redshift to finish before querying X11
+    # Dual-fork technique adapted from:
+    #     https://stackoverflow.com/questions/19369671/launching-a-daemon-from-python-then-detaching-the-parent-from-the-child
+    if os.fork() > 0:
+        sys.exit()
+    os.setsid()
+    if os.fork() > 0:
+        sys.exit()
+    time.sleep(4)
+else:
+    output_file = sys.stdout
+
+base_color_intensity = 255 / 2
+red, green, blue = (
+    # Constrain the results between 0 & 255
+    max(0, min(255,
+               # Apply the percentage to our base colour
+               math.floor(base_color_intensity + (base_color_intensity * c)))
+        ) for c in get_randr_rgb_diff())
 if red > 255 or green > 255 or blue > 255:
-    raise NotImplementedError("Gamma value too high")
+    raise NotImplementedError(f"Gamma value {red}:{green}:{blue} too high")
+white = math.floor(base_color_intensity / 2)
 
-print(red, green, blue, file=sys.stderr, flush=True)
+command = f"Color2 {red},{green},{blue},{white}"
+print("Sending command to tastmota:", command, file=output_file)
 
-orig_power_state = json.load(urllib.request.urlopen(
-    urllib.request.Request(f"http://{sonoff_hostname}/cm",
-                           data=f"cmnd=Power".encode('ascii'))))
-if orig_power_state.get('POWER', None) != 'OFF':
-    ## FIXME: Set the colours but keep it off, so that when it turns on it gets the new colours.
-    req = urllib.request.Request(f"http://{sonoff_hostname}/cm",
-                                 data=f"cmnd=color {red},{green},{blue}".encode('ascii'))
-    print(urllib.request.urlopen(req).read(), file=sys.stderr, flush=True)
-
+# NOTE: Tasmota has been told not to power the globe on when setting the color via the SetOption20 config command
+# NOTE: "Color2" = Set color adjusted to current Dimmer value
+req = urllib.request.Request(f"http://{sonoff_hostname}/cm",
+                             data=f"cmnd={command}".encode('ascii'))
+print(json.load(urllib.request.urlopen(req)), file=output_file)
