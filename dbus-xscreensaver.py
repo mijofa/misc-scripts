@@ -11,6 +11,7 @@
 #
 #        I would like to improve this in future to implement xscreensaver-command's -watch functionality
 #        and emit DBus messages accordingly
+#        NOTE: xscreensaver-command.c did this with what looks like simply a "while true: GetActiveTime()" loop.
 
 # FIXME: Facebook's gifs are played using the <video> element, which causes Chrome to repeatedly inhibit the screensaver.
 #        Only solution I can think of for this would be to just not start the inhibitor process until 30-ish seconds after Chrome triggers it.
@@ -36,6 +37,7 @@ import Xlib.display
 import Xlib.protocol
 
 
+# FIXME: Turn this into its own "xscreensaver_command" library and import that.
 class XSS_worker():
     timeout_source_id = None
 
