@@ -1,4 +1,13 @@
 #!/usr/bin/python3 -u
+# FIXME: Steam isn't actually loading the controller layout, making this mostly useless.
+#        This is because Steam switches between layouts depending on what window is in focus and we're never in focus.
+#        * GloSC gets around this by injecting a custom routine into the in memory steamclient.dll.
+#          ref: https://github.com/Alia5/GloSC/blob/master/EnforceBindingDLL/EnforceBindings.cpp
+#        * Is it possible to instead trick the GTK window into believing it has focus even if it doesn't?
+#        * How about simulating dual pointer inputs and using the fake input to put the GTK window in focus?
+#          This probably requires making at least 1 pixel of the window not clickthrough
+# FIXME: Overlay doesn't start on shift-tab regardless of what window is in focus.
+#        It always seems to work when using the Steam button on the controller though, so this is low priority.
 # FIXME: Turn this into a SteamPlay compatibility tool?
 # FIXME: I'm getting "TypeError: Must be number, not NoneType" on startup,
 #        but everything's working fine and I can't figure out what's causing that.
@@ -46,13 +55,11 @@ class MainWindow(Gtk.ApplicationWindow):
 
         # Initialise a GLX context otherwise Steam's overlay won't inject itself
         self.area = GLDrawArea()
+        geo = screen.get_monitor_geometry(0)  # FIXME: Assumes a single monitor
+        self.area.set_size_request(geo.width, geo.height)
         self.add(self.area)
 
         self.connect("draw", self.on_draw)
-        self.area.connect("render", self.on_render)
-
-    def on_render(self, area, ctx):
-        self.present()
 
     def on_draw(self, *args):
         # FIXME: This is running constantly, I only want it to run once after window is initialised
@@ -76,6 +83,8 @@ class MainWindow(Gtk.ApplicationWindow):
         # NOTE: This can't be done before the window has been created
         # NOTE: Is there any problem with this happening before the window has been sized?
         self.input_shape_combine_region(cairo.Region(cairo.RectangleInt(0, 0, 1, 1)))
+
+        self.hide()  # DEBUGGING: Minimize the window because it's all broken at the moment anyway
 
 
 class App(Gtk.Application):
