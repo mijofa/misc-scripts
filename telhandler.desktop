@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=sip-uri-handler
+Comment=Handler for tel: URIs
+GenericName=Call a phone number
+Exec=bash -c 'num=${1#tel:} ; echo twinkle --call $num' -- %u
+Terminal=false
+Type=Application
+MimeType=x-scheme-handler/tel;
+NoDisplay=true
+
