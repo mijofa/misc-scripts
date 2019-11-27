@@ -48,13 +48,14 @@ def most_frequent_colour(image):
 
 
 # Maybe give it just a little white so that the light is never really off?
-white = 0
+# Keep this >0 so that the light never completely turns off
+white = 1
 def update_sonoff_colour(red, green, blue):  # noqa: E302
-    # Make sure all the colours are at least 1,
-    # otherwise the light bulb will turn off and not come back on automatically
-    red = max(1, red)
-    green = max(1, green)
-    blue = max(1, blue)
+    # # Make sure all the colours are at least 1,
+    # # otherwise the light bulb will turn off and not come back on automatically
+    # red = max(1, red)
+    # green = max(1, green)
+    # blue = max(1, blue)
 
     # NOTE: Tasmota has been told not to power the globe on when setting the color via the SetOption20 config command
     # NOTE: "Color2" = Set color adjusted to current Dimmer value.
