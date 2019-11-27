@@ -22,8 +22,7 @@ def get_x_image():  # noqa: E302
 
 # This function mostly copied from: https://zeevgilovitz.com/detecting-dominant-colours-in-python
 def most_frequent_colour(image):
-    w, h = image.size
-    pixels = image.getcolors(w * h)
+    pixels = image.getcolors(o_x_geo.width * o_x_geo.height)
 
     # Pixels is a list of tuples,
     # the first item is the number of occurences,
@@ -60,9 +59,8 @@ def update_sonoff_colour(red, green, blue):  # noqa: E302
     # NOTE: Tasmota has been told not to power the globe on when setting the color via the SetOption20 config command
     # NOTE: "Color2" = Set color adjusted to current Dimmer value.
     #       We don't actually want that though because that'd make 1,1,1 just be pure white.
-    command = f"Color1 {red},{green},{blue},{white}"
     req = urllib.request.Request(f"http://{sonoff_hostname}/cm",
-                                 data=f"cmnd={command}".encode('ascii'))
+                                 data=f"cmnd=Color1 {red},{green},{blue},{white}".encode('ascii'))
     return json.load(urllib.request.urlopen(req))
 
 
