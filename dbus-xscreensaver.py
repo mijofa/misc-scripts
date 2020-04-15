@@ -14,7 +14,7 @@
 #        NOTE: xscreensaver-command.c did this with what looks like simply a "while true: GetActiveTime()" loop.
 
 # FIXME: Facebook's gifs are played using the <video> element, which causes Chrome to repeatedly inhibit the screensaver.
-#        Only solution I can think of for this would be to just not start the inhibitor process until 30-ish seconds after Chrome triggers it.
+#        Only solution I can think of for this is to not start the inhibitor process until 30-ish seconds after Chrome triggers it.
 #        This is an ugly solution, but I can't think of any better.
 
 import random
@@ -77,8 +77,7 @@ class XSS_worker():
                             self.display.intern_atom("_SCREENSAVER_RESPONSE", False),
                             Xlib.Xatom.STRING)
                         break
-        assert response, "No response recieved"
-        return response.value
+        return response.value if response else None
 
     def get_active(self):
         status = self.display.screen().root.get_full_property(
@@ -110,9 +109,11 @@ class XSS_worker():
 
     def add_inhibitor(self, inhibitor_id: int, caller: dbus.String, reason: dbus.String, caller_process: psutil.Process):
         assert inhibitor_id not in self.inhibitors, "Already working on that inhibitor"
-        self.inhibitors.update({inhibitor_id: {'caller': caller, 'reason': reason, 'caller_process': caller_process}})
-        print('Inhibitor requested by "{caller}" ({process_name}) for reason "{reason}". Given ID {ID}'.format(
-                  caller=caller, reason=reason, ID=inhibitor_id, process_name=caller_process.name()),  # noqa: E126
+        inhibitor = {'caller': caller, 'reason': reason, 'caller_process': caller_process}
+        self.inhibitors.update({inhibitor_id: inhibitor})
+        print(f'Inhibitor requested by "{inhibitor["caller"]}" ({inhibitor["caller_process"].name()})',
+              f'for reason "{inhibitor["reason"]}".',
+              f'Given ID {inhibitor_id}',
               file=sys.stderr, flush=True)
         if self.timeout_source_id is None:
             # AIUI the minimum xscreensaver timeout is 60s, so poke it every 50s.
@@ -128,11 +129,14 @@ class XSS_worker():
 
     def del_inhibitor(self, inhibitor_id):
         assert inhibitor_id in self.inhibitors, "Already removed that inhibitor"
-        print('Removed inhibitor for "{caller}" with ID {ID}'.format(
-            caller=self.inhibitors.pop(inhibitor_id)['caller'], ID=inhibitor_id), file=sys.stderr, flush=True)
+        inhibitor = self.inhibitors.pop(inhibitor_id)
+        print(f'Removed inhibitor for "{inhibitor["caller"]}" ({inhibitor["caller_process"].name()})',
+              f'with ID {inhibitor_id}',
+              file=sys.stderr, flush=True)
         if len(self.inhibitors) == 0 and self.timeout_source_id is not None:
             print('Stopping inhibitor timeout')
-            GLib.remove(self.timeout_source_id)
+            # FIXME: Use one of the other source_remove functions so this can be more descriptive
+            GLib.source_remove(self.timeout_source_id)
             self.timeout_source_id = None
 
     def _inhibitor_func(self):
