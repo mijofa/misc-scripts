@@ -12,7 +12,7 @@ import evdev
 
 
 VALVE_VENDOR_ID = '28DE'
-_TIMEOUT = 10
+_TIMEOUT = 0
 
 DEBUG = False
 
@@ -87,15 +87,18 @@ def watcher(dev_path):
             print("Opened controller {vid:x}:{pid:x} {name}".format(vid=js.info.vendor, pid=js.info.product, name=js.name))
             last_nudge = 0
             for ev in js.read_loop():
+                if DEBUG:
+                    print(ev)
                 # FIXME: Set _TIMEOUT to half of whatever the current screensaver timeout is
                 #        For some reason Xlib.display.Display().get_screen_saver().timeout always returns 0 though.
                 if last_nudge + _TIMEOUT <= time.monotonic():  # Don't nudge any more often than every _TIMEOUT seconds
-                    last_nudge = time.monotonic()
                     if ev.type in (evdev.ecodes.EV_KEY, evdev.ecodes.EV_ABS, evdev.ecodes.EV_REL):
                         print('.', end='', flush=True)
                         deactivate_screensaver()
-                    elif ev.type in (evdev.ecodes.EV_SYN, ):
-                        # I expect EV_SYN often, but I want to ignore it
+                        last_nudge = time.monotonic()
+                    elif ev.type in (evdev.ecodes.EV_SYN, evdev.ecodes.EV_FF):
+                        # I expect these often, but I want to ignore them
+                        deactivate_screensaver()
                         pass
                     else:
                         # This is mostly just belt-and-braces,
@@ -133,7 +136,10 @@ if __name__ == '__main__':
     #        NOTE: Would it only handle the ones connected on start up or could it also wait for new devices?
     devices = find_steam_controller()
     if len(devices) > 1:
-        raise NotImplementedError("Only support 1 Valve event device at a time")
+        for dev_path in devices:
+            with contextlib.closing(evdev.InputDevice(dev_path)) as js:
+                print(dev_path, '{vid:x}:{pid:x} {name}'.format(vid=js.info.vendor, pid=js.info.product, name=js.name))
+        # raise NotImplementedError("Only support 1 Valve event device at a time")
     elif len(devices) < 1:
         raise FileNotFoundError("Can't find any Valve event devices")
 

@@ -50,6 +50,8 @@ This is to be run from in a forced SSH command for a given SSH key so that I can
 
 js-wake
 =======
+OBSOLETE: I found this instead: https://github.com/foresto/joystickwake
+
 This is intended to help solve the problem of Xscreensaver not staying awake when using a joystick/gamepad input.
 
 This script should be kept as minimalistic as possible, the whole point is for it to be running when there's already resource-intensive games running, don't add to that for something that should've been built into the game and/or Steam in the first place.
