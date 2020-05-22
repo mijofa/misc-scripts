@@ -1,5 +1,6 @@
 [Unit]
 Description=DBUS xscreensaver compatibility layer
+After=basic.target dbus.socket
 PartOf=graphical-session.target
 
 [Service]
