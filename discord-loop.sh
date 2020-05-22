@@ -13,7 +13,7 @@ while true ; do
         sleep 0.5
         wmctrl -F -r 'Discord' -b add,sticky,above
         wmctrl -F -r 'Discord' -e 0,2880,400,-1,-1 
-        wmctrl -i -R "$active_winid"
+        wmctrl -i -a "$active_winid"
     done
     wait
 done
