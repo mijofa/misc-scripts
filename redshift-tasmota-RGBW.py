@@ -59,7 +59,9 @@ red, green, blue = (
         ) for c in get_randr_rgb_diff())
 if red > 255 or green > 255 or blue > 255:
     raise NotImplementedError(f"Gamma value {red}:{green}:{blue} too high")
-white = math.floor(base_color_intensity / 2)
+## White is done by 100% R, G, & B
+# white = math.floor(base_color_intensity / 2)
+white = 0
 
 command = f"Color2 {red},{green},{blue},{white}"
 print("Sending command to tastmota:", command, file=output_file)
