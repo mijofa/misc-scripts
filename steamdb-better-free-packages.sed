@@ -9,14 +9,14 @@
 $s/());$/;\n/
 
 # Add to the loaded_count when removing pre-owned licenses
-/\(\t\+\)\(freePackages.delete(.*)\);/s//\1if ( \2 ) {\n\1\tconsole.debug("Already owned " + match[ 1 ]);\n\1\tloaded_count++\n\1}/
+/\(\t\+\)\(freePackages.delete(.*)\);/s//\1if ( \2 ) {\n\1\tconsole.info("Already owned " + match[ 1 ]);\n\1\tloaded_count++\n\1}/
 
 # Make a new variable for the truncated list
 /^\t\+freePackages/,$s/freePackages/fiftyFreePackages/
 s/fiftyFreePackages = /let \0/
 
 # Add a sucess action when claiming licenses
-/^\(\t\+\)\().always( requestNext );\)$/s//\1).done( function( data ) {\n\1\tconsole.debug("Successfully claimed code " + fiftyFreePackages[ index ]);\n\1\tfreePackages.delete(fiftyFreePackages[ index ]);\n\1\tloaded_count++;\n\1}\2/
+/^\(\t\+\)\().always( requestNext );\)$/s//\1).done( function( data ) {\n\1\tconsole.info("Successfully claimed code " + fiftyFreePackages[ index ]);\n\1\tfreePackages.delete(fiftyFreePackages[ index ]);\n\1\tloaded_count++;\n\1}\2/
 
 # Cleanup the progress display
 /{loaded}/s/fiftyFreePackages.length/total_count/
@@ -24,7 +24,7 @@ s/fiftyFreePackages = /let \0/
 /Reloading…/s|^\(\t\+\)'Reloading…',|\1'Waiting…',\n\1`Loaded <b>${loaded_count}</b>/${total_count}.`,|
 
 # Print the time instead of reloading the page
-s/location.reload()/console.debug("Finished at "+Date())/
+s/location.reload()/console.info("Finished at "+Date())/
 
 # Run the function now, and every hour
 $a steamdb_function();
