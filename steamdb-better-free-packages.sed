@@ -23,8 +23,8 @@ s/fiftyFreePackages = /let \0/
 /{loaded}/s/loaded/loaded_count/
 /Reloading…/s|^\(\t\+\)'Reloading…',|\1'Waiting…',\n\1`Loaded <b>${loaded_count}</b>/${total_count}.`,|
 
-# Don't reload the page
-/location.reload/d
+# Print the time instead of reloading the page
+s/location.reload()/console.debug("Finished at "+Date())/
 
 # Run the function now, and every hour
 $a steamdb_function();
