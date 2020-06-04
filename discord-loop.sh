@@ -13,7 +13,7 @@
 printf '"%s"\n%s\n' "xdotool keyup F15" 'b:9'    "xdotool keydown F15" 'b:9 + Release'    "xdotool keyup F15" 'b:8'    "xdotool keydown F15" 'b:8 + Release' | \
 xbindkeys -n -f /dev/stdin & xbindkeys_pid=$!
 # Make sure F15 is released when this script dies
-trap "xdotool keyup F15 ; kill $xbindkeys_pid" EXIT
+trap "xdotool keyup F15 ; kill $xbindkeys_pid" ERR EXIT
 
 while true ; do
     active_winid="$(xprop -root -notype -f _NET_ACTIVE_WINDOW 0x " \$0\\n" _NET_ACTIVE_WINDOW)"
@@ -23,13 +23,14 @@ while true ; do
     for i in {1..10} ; do 
         sleep 0.5
         # FIXME: Apparently xdotool can do all of this. Use that and reduce the script's dependencies.
-        wmctrl -F -r 'Discord' -b add,sticky,above
+        wmctrl -F -r 'Discord' -b add,sticky,above || continue
         wmctrl -F -r 'Discord' -e 0,2880,400,-1,-1 
         wmctrl -i -a "$active_winid"
     done
     # I actually want voice activity, so start the push-to-talk as soon as Discord is back
     xdotool keydown F15
-    wait "$discord_pid"
+    # FIXME: If discord exits cleanly, we should quit the entire script
+    wait "$discord_pid" || true  # I expect Discord to crash, don't let it trigger the trap
     # If discord crashes, release the push-to-talk key
     xdotool keyup F15
 done
