@@ -29,3 +29,6 @@ s/location.reload()/console.info("Finished at "+Date())/
 # Run the function now, and every hour
 $a steamdb_function();
 $a setInterval(steamdb_function, 1000*60*60);
+
+# NOTE: Use this to add to the freePackages list without restarting the whole thing:
+#     xclip -o | sed -n -E '/^\s+[[:digit:]]+, \/\// {s/^\s+/freePackages.add(/;s/, \/\/.*$/);/;p} ; $a total_count = [...freePackages].length+loaded_count' | xclip -i -selection clipboard
