@@ -1,0 +1,10 @@
+# PROBLEM: XFCE has no systemd integration
+#
+# I can't just make XFCE run 'systemctl --user start graphical-session.target' on startup,
+# as that target refuses manual start/stop.
+# So this is an intermediary target just for that.
+#
+# FIXME: How do I implement the stop?
+[Unit]
+Description=User systemd services for XFCE graphical session
+BindsTo=graphical-session.target
