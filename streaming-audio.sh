@@ -23,18 +23,19 @@ pactl set-default-source MicAndGame.monitor
 pactl set-default-sink GameOnly
 
 ## Link loopbacks/etc together
+## FIXME: I can't figure out how to set the volume of these 3 automatically
 # Connect Mic input to MicAndGame input
-pactl load-module module-loopback latency_msec=1 sink=MicAndGame source="$REAL_INPUT" >/dev/null
+Mic2Combined="$(pactl load-module module-loopback latency_msec=1 sink=MicAndGame source="$REAL_INPUT")"
 # Connect GameOnly output to MicAndGame input
-pactl load-module module-loopback latency_msec=1 sink=MicAndGame source=GameOnly.monitor >/dev/null
+Game2Combined="$(pactl load-module module-loopback latency_msec=1 sink=MicAndGame source=GameOnly.monitor)"
 # Connect GameOnly output to actual output sink
-pactl load-module module-loopback latency_msec=1 sink="$REAL_OUTPUT" source=GameOnly.monitor >/dev/null
+Game2Real="$(pactl load-module module-loopback latency_msec=1 sink="$REAL_OUTPUT" source=GameOnly.monitor)"
 
 ## Set Volumes
 pactl set-sink-volume "$REAL_OUTPUT" 100%
 pactl set-sink-volume MicAndGame 100%
-pactl set-sink-volume GameOnly 20%
-pactl set-source-volume "$REAL_INPUT" 30%
+pactl set-sink-volume GameOnly 50%
+pactl set-source-volume "$REAL_INPUT" 50%
 pactl set-source-volume MicAndGame.monitor 100%
 pactl set-source-volume GameOnly.monitor 100%
 

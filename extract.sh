@@ -8,7 +8,8 @@ actually_do_extraction () {
     tmp_extraction=$(mktemp --tmpdir="$PWD" --directory)
 
     archive="$1"
-    new_dir="${archive%.*}"  # Remove everything after the last .
+    new_dir="${archive##*/}"  # Basename it
+    new_dir="${new_dir%.*}"  # Remove everything after the last .
     new_dir="${new_dir%.tar}"  # Remove .tar from the end (for cases such as .tar.gz)
 
     if [ -d "$new_dir" ] ; then
