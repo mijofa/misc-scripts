@@ -1,0 +1,13 @@
+#!/bin/sh
+if [ -z "$1" ] ; then
+  printf 'Usage: %s PID\n' "$0"
+  printf '\nInhibits the screensaver until PID ends\n'
+  exit 1
+fi
+printf 'Inhibiting screensaver while process %s is running\n' "$1"
+while ps $1 >/dev/null ; do
+    xscreensaver-command -deactivate 2>&1 | grep -v -e '^xscreensaver-command: not active: idle timer reset.$' -e '^$'
+    printf '.'
+    sleep 30
+done
+printf '\nProcess %s is no longer running, stopped inhibiting screensaver\n' "$1"

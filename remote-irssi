@@ -1,0 +1,79 @@
+#!/bin/bash
+# This script gets run in place of 'ssh' and it will kill the SSH session when the screen is locked, starting the session back up when it unlocks.
+# It's useful in conjuction with a remote Irssi session that has the screen_away module activated to your away status based on the screen session's connection status
+
+set -x
+set -eEu -o pipefail
+shopt -s failglob
+trap 'echo >&2 "${BASH_SOURCE:-$0}:${LINENO}: unknown error" ; sleep 30' ERR
+
+# If there's no SSH key in the agent, add one now
+{ ssh-add -l || ssh-add ; }
+
+# Place this window on the secondary monitor
+# NOTE: screen size and screen position get swapped in this sed command to match the MVARG option to wmctrl
+secondary_screen_position=$(xrandr | sed --silent -E 's/^.* connected ([[:digit:]]+)x([[:digit:]]+)\+([[:digit:]]+)\+([[:digit:]]+) .*$/\3,\4,\1,\2/p')
+if [ -n "$secondary_screen_position" ] ; then
+    # NOTE: wmctrl's -b argument accepts only a maximum of 2 properties at a time
+    # Unmaximise the window becuase we can't move a maximised window
+    wmctrl -i -r "$WINDOWID" -b remove,maximized_vert,maximized_horz
+    # Move it, and resize it to the full monitor size
+    wmctrl -i -r "$WINDOWID" -e "0,$secondary_screen_position"
+    # Remaximise it
+    wmctrl -i -r "$WINDOWID" -b add,maximized_vert,maximized_horz
+    # Make it fullscreen and "always on visible workspace"
+    wmctrl -i -r "$WINDOWID" -b add,fullscreen,sticky
+fi
+
+screen_watcher() {
+    xscreensaver-command -watch | while read action timestamp ; do
+        echo "$action $timestamp" >&2
+        if [ "$action" = "BLANK" -o "$action" = "LOCK" ] ; then
+            # BLANK and LOCK do actually mean different things, but for our purposes we don't care
+            # FIXME: Maybe we do? Does BLANK trigger as the screen fade starts? Because having this trigger at that point is annoying.
+            #
+            # Need to check if it's running first otherwise the script crashes when trying to kill a process that isn't running.
+            # FIXME: Just put a '|| true' at the end?
+            pgrep --parent $$ ssh >/dev/null && pkill --parent $$ ssh
+        elif [ "$action" = "UNBLANK" ] ; then
+            # There is no UNLOCK action, UNBLANK only triggers after an unlock happens.
+            echo "$action"  # This triggers in the other loop where stdout is read in
+        elif [ "$action" = "RUN" ] ; then
+            # This just means it started a new screensaver, we don't care about it.
+            # Only putting this elif here so we don't catch it in the else block
+            true
+        else
+            printf 'Xscreensaver said "%s %s" I have no idea what that means\n' "$action" "$timestamp" >&2
+        fi
+    done
+}
+coproc screen_watcher
+
+until ssh "$@" ; do
+    if type toilet  >/dev/null 2>&1 ; then
+        printf '\ec'
+        toilet -tffuture 'Screensaver active'
+        toilet -tffuture 'Waiting for user return'
+    else
+        printf '\ecScreensaver active. Waiting for user return\n'
+    fi
+
+    while read state ; do
+        if [ "$state" = "UNBLANK" ] ; then
+            sleep 1
+            break
+        else
+            echo "state $state" >&2
+        fi
+    done <&${COPROC[0]} # This is stdout of the coprocess above
+done
+## Killing $COPROC_PID doesn't kill the xscreensaver-command, so I need to do this annoying thing instead.
+## --full is necessary because the process name is being truncated to "xscreensaver-co"
+## FIXME: Can I just say "kill $COPROC_PID and all children?"
+#pkill --full --parent ${COPROC_PID[0]} xscreensaver-command
+#kill ${COPROC_PID[0]}
+
+# Killing the coproc doesn't kill the xscreensaver-command, so I need to do kill all children of that process first.
+# The coproc itself should then die on it's own, but it doesn't hurt to explicitly kill it too
+pkill --parent ${COPROC_PID[0]}
+kill ${COPROC_PID[0]}
