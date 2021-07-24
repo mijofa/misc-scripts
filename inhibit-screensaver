@@ -1,13 +1,32 @@
-#!/bin/sh
-if [ -z "$1" ] ; then
-  printf 'Usage: %s PID\n' "$0"
-  printf '\nInhibits the screensaver until PID ends\n'
+#!/bin/bash
+if [[ -z "$1" ]] ; then
+  printf 'Usage: %s [PID|command]\n' "$0"
+  printf '\nInhibits the screensaver until PID stops running or the command finishes\n'
   exit 1
 fi
-printf 'Inhibiting screensaver while process %s is running\n' "$1"
-while ps $1 >/dev/null ; do
-    xscreensaver-command -deactivate 2>&1 | grep -v -e '^xscreensaver-command: not active: idle timer reset.$' -e '^$'
-    printf '.'
-    sleep 30
-done
-printf '\nProcess %s is no longer running, stopped inhibiting screensaver\n' "$1"
+
+inhibit_until_killed() {
+    while sleep 30 ; do
+        xscreensaver-command -deactivate 2>&1 | grep -v -e '^xscreensaver-command: not active: idle timer reset.$' -e '^$'
+        printf '.'
+    done
+}
+
+if [[ "$1" =~ ^[0-9]+$ ]] && [[ "$#" == "1" ]] ; then
+    printf 'Inhibiting screensaver while process %s is running\n' "$1"
+    while ps $1 >/dev/null ; do
+        xscreensaver-command -deactivate 2>&1 | grep -v -e '^xscreensaver-command: not active: idle timer reset.$' -e '^$'
+        printf '.'
+        sleep 30
+    done
+    printf '\nProcess %s is no longer running, stopped inhibiting screensaver\n' "$1"
+else
+    printf 'Inhibiting screensaver until command finishes: %q' "$@"
+    coproc inhibit_until_killed
+
+    "$@" ; RETURN_CODE=$?
+
+    kill ${COPROC_PID[0]}
+
+    exit $RETURN_CODE
+fi
