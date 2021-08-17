@@ -2,7 +2,6 @@
 # This script gets run in place of 'ssh' and it will kill the SSH session when the screen is locked, starting the session back up when it unlocks.
 # It's useful in conjuction with a remote Irssi session that has the screen_away module activated to your away status based on the screen session's connection status
 
-set -x
 set -eEu -o pipefail
 shopt -s failglob
 trap 'echo >&2 "${BASH_SOURCE:-$0}:${LINENO}: unknown error" ; sleep 30' ERR
@@ -27,8 +26,8 @@ fi
 
 screen_watcher() {
     xscreensaver-command -watch | while read action timestamp ; do
-        echo "$action $timestamp" >&2
-        if [ "$action" = "BLANK" -o "$action" = "LOCK" ] ; then
+        #echo "$action $timestamp" >&2  # DEBUG
+        if [ "$action" = "LOCK" ] ; then
             # BLANK and LOCK do actually mean different things, but for our purposes we don't care
             # FIXME: Maybe we do? Does BLANK trigger as the screen fade starts? Because having this trigger at that point is annoying.
             #
@@ -38,7 +37,7 @@ screen_watcher() {
         elif [ "$action" = "UNBLANK" ] ; then
             # There is no UNLOCK action, UNBLANK only triggers after an unlock happens.
             echo "$action"  # This triggers in the other loop where stdout is read in
-        elif [ "$action" = "RUN" ] ; then
+        elif [ "$action" = "BLANK" -o "$action" = "RUN" ] ; then
             # This just means it started a new screensaver, we don't care about it.
             # Only putting this elif here so we don't catch it in the else block
             true
@@ -62,8 +61,8 @@ until ssh "$@" ; do
         if [ "$state" = "UNBLANK" ] ; then
             sleep 1
             break
-        else
-            echo "state $state" >&2
+        #else  # DEBUG
+        #    echo "state $state" >&2  # DEBUG
         fi
     done <&${COPROC[0]} # This is stdout of the coprocess above
 done
