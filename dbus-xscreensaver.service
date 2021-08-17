@@ -1,7 +1,7 @@
 [Unit]
 Description=DBUS xscreensaver compatibility layer
 After=basic.target dbus.socket
-PartOf=graphical-session.target
+Conflicts=exit.target
 
 [Service]
 # FIXME: Can this be turned into a bus-activatable service?
