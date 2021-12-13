@@ -7,6 +7,8 @@ and it usually gets 3 repeate event triggers every time for some reason.
 So whatever it triggers should be made idempotent.
 """
 # Based on examples/xrandr.py from python3-xlib
+# TODO: React to rotation changes by rotating the tablet too
+
 import sys
 # import pprint
 import subprocess
@@ -22,14 +24,28 @@ rotation_labels = {
     Xlib.ext.randr.Rotate_180: "inverted",
     Xlib.ext.randr.Rotate_270: "left",
 }
+X11_rotation_to_wacom = {
+    Xlib.ext.randr.Rotate_0: 0,
+    Xlib.ext.randr.Rotate_90: 1,
+    Xlib.ext.randr.Rotate_180: 3,
+    Xlib.ext.randr.Rotate_270: 2,
+}
 
 
-def triggered_event_function():
-    """Triggered when the RandR event occurs."""
+def foreach_wacom(func):
+    """Call 'func' for each Wacom device."""
+    # FIXME: Don't hardcode these, query the xinput devices list instead.
     for wacom_device in "Wacom HID 5285 Pen stylus", "Wacom HID 5285 Pen eraser", "Wacom HID 5285 Finger touch":
-        # FIXME: 'eDP-1' is the internal screen on my laptop. This should be made configurable.
-        #        I expect it can't be automatically determined, but do that instead if possible
-        subprocess.check_call(['xinput', 'map-to-output', wacom_device, 'eDP-1'])
+        func(wacom_device)
+
+
+def on_all_change_events():
+    """Triggered when the RandR event occurs."""
+    # FIXME: 'eDP-1' is the internal screen on my laptop. This should be made configurable.
+    #        I expect it can't be automatically determined, but do that instead if possible
+    # FIXME: Don't run xinput externally, do that in Python (snippets in xinput.py)
+    # FIXME: xinput set-prop {d} 'Wacom Rotation' {X11_rotation_to_wacom[eDP-1's rotation]}
+    foreach_wacom(lambda d: subprocess.check_call(['xinput', 'map-to-output', d, 'eDP-1']))
 
 
 # Application window (only one)
@@ -90,11 +106,19 @@ class Window(object):
                 print('Screen change occured, calling trigger function')
                 # FIXME: Keep the previous state and compare for some educated guesses on what the change was.
                 #        Probably only useful for logging though
-                # FIXME: This data mentions 'rotation', and it seems to match the internal display's rotation, but how?
-                #        Why is it mentioned for just this display? Is the window perhaps on this display even though it's hidden?
 #                pprint.pprint(e._data)
-                print(f"Resolution: {e.width_in_pixels}x{e.height_in_pixels}    Rotation: {rotation_labels[e.rotation]}")
-                triggered_event_function()
+                on_all_change_events()
+
+                print("Current display configs:")
+                for output in Xlib.ext.randr.get_screen_resources(self.screen.root).outputs:
+                    output_info = Xlib.ext.randr.get_output_info(self.screen.root, output, config_timestamp=0)
+                    print('\t', output_info.name, end=': ')
+                    if output_info.crtc:
+                        crtc_info = self.d.xrandr_get_crtc_info(output_info.crtc, config_timestamp=0)
+                        print(crtc_info.width, crtc_info.height, sep='x', end=' ')
+                        print(rotation_labels[crtc_info.rotation])
+                    else:
+                        print('disconnected')
 
             # Somebody wants to tell us something
             # Probably an instruction from the WM
