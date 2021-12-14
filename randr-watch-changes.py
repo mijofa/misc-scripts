@@ -99,6 +99,14 @@ class Window(object):
 
     def loop(self):
         """Wait for and handle the X11 events."""
+        # FIXME: 'eDP-1' is the internal screen on my laptop. This should be made configurable.
+        #        I expect it can't be automatically determined, but do that instead if possible.
+        # FIXME: Same goes for the 'Wacom' string, and what happens if I happen to plug in a USB Wacom?
+
+        # Gotta make sure it's all correct before things change just in case we logged in with multiple monitors
+        self.update_current_outputs()
+        self.map_wacoms_to_output(output_name='eDP-1', wacom_prefix='Wacom HID 5285 ')
+
         while 1:
             e = self.d.next_event()
 
@@ -114,9 +122,6 @@ class Window(object):
                 # pprint.pprint(e._data)
 
                 self.update_current_outputs()
-                # FIXME: 'eDP-1' is the internal screen on my laptop. This should be made configurable.
-                #        I expect it can't be automatically determined, but do that instead if possible.
-                # FIXME: Same goes for the 'Wacom' string, and what happens if I happen to plug in a USB Wacom?
                 self.map_wacoms_to_output(output_name='eDP-1', wacom_prefix='Wacom HID 5285 ')
 
             # Somebody wants to tell us something
