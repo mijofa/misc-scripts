@@ -1,0 +1,18 @@
+[Unit]
+Description=RRScreenChangeNotify watcher for wacom rotation
+Conflicts=exit.target
+PartOf=graphical-session.target
+
+[Service]
+# Python3 defaults to quite a large buffer for stdout/stderr.
+# This makes the journal significantly less useful for debugging because the log messages don't appear immediately.
+Environment=PYTHONUNBUFFERED=LiterallyAnyNonZeroString
+ExecStart=%h/vcs/misc-scripts/randr-watch-changes.py
+
+## FIXME: these are copied from most of PrisonPC's systemd jobs, but apparently are "NOT APPROPRIATE for" any of them
+Restart=on-failure
+RestartSec=30s
+StartLimitBurst=0
+
+[Install]
+WantedBy=graphical-session.target
