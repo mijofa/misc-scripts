@@ -1,5 +1,15 @@
 #!/usr/bin/python3
-"""Wrapper around password-store to make OTP integrate nicer."""
+"""
+Wrapper around password-store to make OTP integrate nicer.
+
+Mostly only created because qtpass is a bit annoying with how it integrates pass-extension-otp.
+I recommend adding 'OTP Token' to your template in qtpass when using this.
+
+This does make using qtpass to *edit* secrets with OTP tokens a bit annoying,
+but that's easy to work around and doesn't happen nearly as often.
+Qtpass's edit does a 'show' then you edit the output of that before it imports the updated version.
+So the edit dialog will show the OTP token itself which must be manually removed before saving.
+"""
 import re
 import os
 import subprocess
@@ -9,7 +19,7 @@ import urllib.parse
 REAL_PASS_PATH = '/usr/bin/pass'
 assert REAL_PASS_PATH != sys.argv[0]
 
-if sys.argv[1] != 'show':
+if len(sys.argv) <= 1 or sys.argv[1] != 'show':
     # We do nothing here, just run the normal pass and move on
     # NOTE: The 2nd argument to execlp becomes the zero-th argument to the called binary
     os.execlp(REAL_PASS_PATH, REAL_PASS_PATH, *sys.argv[1:])
