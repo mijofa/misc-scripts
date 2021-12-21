@@ -3,7 +3,7 @@ Pass Extensions
 
 A couple of extensions for use with `Pass <https://github.com/zx2c4/password-store>`_
 
-Pass will not run extensions from the password store itself without setting PASSWORD_STORE_EXTENSIONS_ENABLE=true
+Pass will not run extensions from the password store itself without setting PASSWORD_STORE_EXTENSIONS_ENABLE=true.
 I would also recommend setting PASSWORD_STORE_SIGNING_KEY=true as well, and signing each extension appropriately
 
 pass-show-and-maybe-otp.py
@@ -19,7 +19,7 @@ Theoretically I could've done this as an extension like 'pass show-and-otp ...' 
 
 ssh-add.bash
 ------------
-Store SSH keys in pass and import them directly into your SSH agent without creating intermediary temporary files
+Store SSH keys in pass and import them directly into your SSH agent without creating intermediary temporary files.
 Equivalent to::
 
     ssh-add <(pass show foo)
@@ -30,18 +30,17 @@ Create a temporary SSH agent, import a key file from pass, run a command (sftp/r
 
 I initially created this for sftp servers that close the connection after trying the first key from your agent,
 before finding the last added one which will actually work.
-This way the agent used by the sftp call only knows about the one needed for this specific server
+This way the agent used by the sftp call only knows about the one needed for this specific server.
 
 ssh.bash
 --------
-Allows for using keys, passwords, and OTP tokens from pass directly when SSHing to an external host
+Allows for using keys, passwords, and OTP tokens from pass directly when SSHing to an external host.
 
-Depends on `ssh-agent.bash`_, and `ssh.askpass-helper`_
+Depends on `ssh-agent.bash`_, and `ssh.askpass-helper`_.
 
-FIXME: Currently does not support passwords *and* keys at the same time,
-       because when it identifies the pass file as a key it just calls out to ssh-agent.bash
+FIXME: Currently does not support passwords *and* keys at the same time, because when it identifies the pass file as a key it just calls out to ssh-agent.bash
 
 ssh.askpass-helper
 ------------------
-Only exists as a helper for `ssh.bash`_
-This is what SSH calls to get the passwords/etc from pass
+Only exists as a helper for `ssh.bash`_.
+This is what SSH calls to get the passwords/etc from pass.
