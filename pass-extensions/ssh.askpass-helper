@@ -1,0 +1,19 @@
+#!/bin/bash
+
+prompt_text="$1"
+
+# Drop $1 so that we can re-use the arguments directly in calls to external commands later
+shift
+
+# FIXME: Are this strings standardised? Specifically the 'Verification code:' one for OTP tokens?
+if [ "$prompt_text" = "Password: " ] ; then
+    # Asking for normal password, grab the top line
+    pass show "$PASSWORD_STORE_SSH_ASKPASS_HELPER_RECORD" | head -1
+elif [ "$prompt_text" = "Verification code: " ] ; then
+    # Asking for OTP token, just use that extension
+    pass otp "$PASSWORD_STORE_SSH_ASKPASS_HELPER_RECORD"
+else
+    # Not Implemented, fallback on askpass
+    ssh-askpass "$@"
+fi
+
