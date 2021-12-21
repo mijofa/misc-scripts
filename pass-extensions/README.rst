@@ -6,6 +6,24 @@ A couple of extensions for use with `Pass <https://github.com/zx2c4/password-sto
 Pass will not run extensions from the password store itself without setting PASSWORD_STORE_EXTENSIONS_ENABLE=true.
 I would also recommend setting PASSWORD_STORE_SIGNING_KEY=true as well, and signing each extension appropriately
 
+get-meta.bash
+-------------
+Gets the value of a key:value metadata line in the file.
+Pretty much the same use-case as `https://github.com/rjekker/pass-extension-meta <pass-extension-meta>`_,
+but much simpler.
+
+Pass-extension-meta allowed for partial key matches,
+complicated searches for multiple keys,
+and even copying to clipboard directly.
+This has none of that, but also doesn't need perl.
+
+head.bash
+---------
+Gets **just** the password from the top line of the file.
+Effectively the opposite of `https://github.com/palortoff/pass-extension-tail <pass-extension-tail>`_.
+
+This will also leave out the newline character from the end of the line.
+
 pass-show-and-maybe-otp.py
 --------------------------
 This is actually a **wrapper** to pass, for use with `QtPass <https://qtpass.org>`_.
