@@ -3,6 +3,9 @@ Pass Extensions
 
 A couple of extensions for use with `Pass <https://github.com/zx2c4/password-store>`_
 
+Pass will not run extensions from the password store itself without setting PASSWORD_STORE_EXTENSIONS_ENABLE=true
+I would also recommend setting PASSWORD_STORE_SIGNING_KEY=true as well, and signing each extension appropriately
+
 pass-show-and-maybe-otp.py
 --------------------------
 This is actually a **wrapper** to pass, for use with `QtPass <https://qtpass.org>`_.
