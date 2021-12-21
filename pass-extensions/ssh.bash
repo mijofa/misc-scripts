@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # The main logic of grabbing the passwords actually needs to be done in an "askpass" command that SSH calls out to.
 export SSH_ASKPASS="${BASH_SOURCE[0]%.bash}.askpass-helper"
