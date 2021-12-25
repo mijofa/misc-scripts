@@ -43,9 +43,6 @@ class PassAgent(NetworkManager.SecretAgent):
         raw_data = self.password_store.get_decrypted_password(entry_name).splitlines()
         pass_data = {}
 
-        if raw_data[0]:
-            pass_data['password'] = raw_data[0]
-
         for line in raw_data[1:]:
             if not line:
                 # Ignore blank lines
@@ -70,7 +67,7 @@ class PassAgent(NetworkManager.SecretAgent):
                         k = 'user'
                     pass_data[k] = v.strip()
 
-        return pass_data
+        return raw_data[0], pass_data
 
     def GetSecrets(self, connection, connection_path, setting_name, hints, flags):
         """Respond with the necessary secrets."""
@@ -87,7 +84,9 @@ class PassAgent(NetworkManager.SecretAgent):
 
             if len(pass_entries) == 1:
                 print("Using pass entry:", pass_entries[0])
-                return {setting_name: self.pass_show_and_otp(pass_entries[0])}
+                password, pass_data = self.pass_show_and_otp(pass_entries[0])
+                pass_data['password'] = password
+                return {setting_name: pass_data}
         elif setting_name == 'wireguard':
             # FIXME: Don't just grab the first peer, that's lazy.
             #        Although probably valid 90% of the time
@@ -99,8 +98,18 @@ class PassAgent(NetworkManager.SecretAgent):
             if len(pass_entries) == 1:
                 print("Using pass entry:", pass_entries[0])
                 # FIXME: How the fuck do I set the peer's preshared-key?
-                pass_data = self.pass_show_and_otp(pass_entries[0])
-                pass_data['private-key'] = pass_data.pop('password')
+                private_key, pass_data = self.pass_show_and_otp(pass_entries[0])
+                pass_data['private-key'] = private_key
+                return {setting_name: pass_data}
+        elif setting_name == '802-11-wireless-security':
+            ssid = b''.join(connection['802-11-wireless']['ssid']).decode()
+
+            pass_entries = list(self.pass_find(ssid))
+
+            if len(pass_entries) == 1:
+                print("Using pass entry:", pass_entries[0])
+                psk, pass_data = self.pass_show_and_otp(pass_entries[0])
+                pass_data['psk'] = psk
                 return {setting_name: pass_data}
         else:
             # FIXME: What about WiFi PSKs?
