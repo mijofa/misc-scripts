@@ -98,3 +98,12 @@ SOLUTION
 2. This script will extract into a tmp dir (in current directory to avoid filling /tmp) then count the entries in the root of that tmp dir:
    * If it's more than 1, rename the tmp dir to the name of the archive (minus extension)
    * If it's only 1, move it out to the current directory and delete the tmp dir.
+
+nm-wifi-ssid
+============
+This daemon creates systemd user units according to what WiFi SSID NetworkManager connects to.
+Allowing for running systemd units on only specific WiFi networks.
+
+For now I only use it for `an2linux <https://github.com/rootkiwi/an2linuxserver>`_ and `x2x <https://github.com/dottedmag/x2x>`_,
+but a few other use-cases could be to only run time-sheeting daemon while at work (FIXME: is "not at home" viable with this?),
+or mounting a bulk storage NAS when on the home network with that NAS.
