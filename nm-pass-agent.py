@@ -9,8 +9,9 @@ Based mostly on the otp-agent from python3-networkmanager
 NOTE: Logging output is somewhat sparse because I don't want to risk unencrypted passwords going into the logs.
 """
 
-import sys
 import pathlib
+import socket
+import sys
 import urllib.parse
 
 import dbus.mainloop.glib
@@ -33,10 +34,26 @@ class PassAgent(NetworkManager.SecretAgent):
         """Find pass entries matching file_name, similar to 'pass find'."""
         # NOTE: Using a generator makes this function much simpler,
         #       but I pretty much always want a re-usable list out of it
+        found = []
         for entry in self.password_store.get_passwords_list():
             p = pathlib.Path(entry)
-            if file_name in p.name:
-                yield entry
+            if p.name == file_name:
+                found.append(p)
+
+        if len(found) > 1:
+            # If we've found more than 1 entry, let's see if there's 1 for use on this specific host.
+            # Primarily for WiFi environments that use per-client PSKs and similar.
+            hostname = socket.gethostname()
+            for p in found:
+                if hostname not in p.parts:
+                    found.pop(p)
+
+        if len(found) != 1:
+            raise FileNotFoundError("Can't find the required entry in the password-store")
+        else:
+            # NOTE: pypass doesn't support pathlib objects, so we convert it back to a string
+            print("Using pass entry:", found[0])
+            return str(found[0])
 
     def pass_show_and_otp(self, entry_name):
         """Get data from pass."""
@@ -80,37 +97,29 @@ class PassAgent(NetworkManager.SecretAgent):
 
         if setting_name == 'vpn':
             # FIXME: The code I'm basing this off used 'remote' not 'gateway', why different?
-            pass_entries = list(self.pass_find(connection[setting_name]['data']['gateway']))
+            password, pass_data = self.pass_show_and_otp(self.pass_find(connection[setting_name]['data']['gateway']))
 
-            if len(pass_entries) == 1:
-                print("Using pass entry:", pass_entries[0])
-                password, pass_data = self.pass_show_and_otp(pass_entries[0])
-                pass_data['password'] = password
-                return {setting_name: pass_data}
+            pass_data['password'] = password
+            return {setting_name: pass_data}
         elif setting_name == 'wireguard':
             # FIXME: Don't just grab the first peer, that's lazy.
             #        Although probably valid 90% of the time
             if len(connection[setting_name]['peers']) != 1:
                 print(NotImplementedError("Currently only 1 WireGuard peer is supported at a time"), file=sys.stderr)
                 raise NotImplementedError("Currently only 1 WireGuard peer is supported at a time")
-            pass_entries = list(self.pass_find(connection[setting_name]['peers'][0]['endpoint'].partition(':')[0]))
 
-            if len(pass_entries) == 1:
-                print("Using pass entry:", pass_entries[0])
-                # FIXME: How the fuck do I set the peer's preshared-key?
-                private_key, pass_data = self.pass_show_and_otp(pass_entries[0])
-                pass_data['private-key'] = private_key
-                return {setting_name: pass_data}
+            # FIXME: How the fuck do I set the peer's preshared-key?
+            private_key, pass_data = self.pass_show_and_otp(self.pass_find(
+                connection[setting_name]['peers'][0]['endpoint'].partition(':')[0]))
+
+            pass_data['private-key'] = private_key
+            return {setting_name: pass_data}
         elif setting_name == '802-11-wireless-security':
-            ssid = b''.join(connection['802-11-wireless']['ssid']).decode()
+            psk, pass_data = self.pass_show_and_otp(self.pass_find(
+                b''.join(connection['802-11-wireless']['ssid']).decode()))
 
-            pass_entries = list(self.pass_find(ssid))
-
-            if len(pass_entries) == 1:
-                print("Using pass entry:", pass_entries[0])
-                psk, pass_data = self.pass_show_and_otp(pass_entries[0])
-                pass_data['psk'] = psk
-                return {setting_name: pass_data}
+            pass_data['psk'] = psk
+            return {setting_name: pass_data}
         else:
             # FIXME: What about WiFi PSKs?
             print(NotImplementedError(f"Unrecognised setting_name: {setting_name}"), file=sys.stderr)
