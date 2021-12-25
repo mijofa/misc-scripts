@@ -1,5 +1,8 @@
 #!/bin/bash
-# Just import this file as an SSH key
+# Import all arguments into the ssh-agent as SSH keys
 # FIXME: Ignore the first line?
 # FIXME: Treat the first line as the key's passphrase?
-ssh-add <(pass show "$1")
+
+for key_file in "$@" ; do
+    ssh-add <(pass show "$key_file")
+done
