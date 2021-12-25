@@ -10,8 +10,9 @@ from gi.repository import GLib
 # I could theoretically do the D-Bus stuff myself,
 # but this module should make things easier
 import NetworkManager
-# This module is only useful for running as a systemd unit to update the state of this unit
-# import systemd
+# This module is only useful for running as a systemd unit to update the state of this unit,
+# it doesn't help query systemd's unit status
+import systemd.daemon
 # I couldn't figure out how to make this module interact with the --user manager
 # import pystemd
 
@@ -166,7 +167,9 @@ def cleanup(*args, **kwargs):
 
 signal.signal(signal.SIGINT, cleanup)
 signal.signal(signal.SIGTERM, cleanup)
+systemd.daemon.notify('READY=1')
 try:
     loop.run()
 except KeyboardInterrupt:
+    systemd.daemon.notify('STOPPING=1')
     cleanup()

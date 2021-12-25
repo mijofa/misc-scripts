@@ -14,6 +14,8 @@ import socket
 import sys
 import urllib.parse
 
+import systemd.daemon
+
 import dbus.mainloop.glib
 from gi.repository import GLib
 import NetworkManager
@@ -142,4 +144,6 @@ if __name__ == '__main__':
     loop = GLib.MainLoop()
     # FIXME: Does this automatically use $PASSWORD_STORE_DIR?
     PassAgent('mijofa.py.nm-pass-agent', password_store=pypass.PasswordStore())
+    systemd.daemon.notify('READY=1')
     loop.run()
+    systemd.daemon.notify('STOPPING=1')
