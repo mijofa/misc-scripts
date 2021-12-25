@@ -13,4 +13,4 @@ shift
 "$@"
 
 # Kill the temporary SSH agent
-ssh-agent -k
+. <(ssh-agent -k)

@@ -134,4 +134,8 @@ class Window(object):
 
 
 if __name__ == '__main__':
-    Window(Xlib.display.Display()).loop()
+    try:
+        Window(Xlib.display.Display()).loop()
+    except Xlib.error.ConnectionClosedError:
+        print("X11 connecton closed, time to leave")
+        sys.exit(0)
