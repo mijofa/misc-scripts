@@ -88,12 +88,12 @@ class PassAgent(NetworkManager.SecretAgent):
 
     def GetSecrets(self, connection, connection_path, setting_name, hints, flags):
         """Respond with the necessary secrets."""
-        print("NetworkManager is asking us for a secret")
-        import pprint
-        pprint.pprint(connection)
-        print('setting_name', setting_name)
-        print('hints', hints)
-        print('flags', flags)
+        print(f"NetworkManager is asking us for {setting_name} a secret")
+        # import pprint
+        # pprint.pprint(connection)
+        # print('setting_name', setting_name)
+        # print('hints', hints)
+        # print('flags', flags)
 
         if setting_name == 'vpn':
             # FIXME: The code I'm basing this off used 'remote' not 'gateway', why different?
