@@ -9,6 +9,7 @@ Based mostly on the otp-agent from python3-networkmanager
 NOTE: Logging output is somewhat sparse because I don't want to risk unencrypted passwords going into the logs.
 """
 
+import os
 import pathlib
 import socket
 import sys
@@ -34,8 +35,6 @@ class PassAgent(NetworkManager.SecretAgent):
 
     def pass_find(self, file_name):
         """Find pass entries matching file_name, similar to 'pass find'."""
-        # NOTE: Using a generator makes this function much simpler,
-        #       but I pretty much always want a re-usable list out of it
         found = []
         for entry in self.password_store.get_passwords_list():
             p = pathlib.Path(entry)
@@ -143,7 +142,8 @@ if __name__ == '__main__':
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     loop = GLib.MainLoop()
     # FIXME: Does this automatically use $PASSWORD_STORE_DIR?
-    PassAgent('mijofa.py.nm-pass-agent', password_store=pypass.PasswordStore())
+    PassAgent('mijofa.py.nm-pass-agent', password_store=pypass.PasswordStore(
+        path=os.environ.get('PASSWORD_STORE_DIR', str(pathlib.Path('~/.password-store').expanduser()))))
     systemd.daemon.notify('READY=1')
     loop.run()
     systemd.daemon.notify('STOPPING=1')
