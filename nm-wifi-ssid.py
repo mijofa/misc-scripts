@@ -87,7 +87,7 @@ def get_systemd_units(unit_type=None, unit_state=None, startswith=None):
         yield unit
 
 
-def bulk_update_systemd_targets(SSIDs):
+def bulk_update_systemd_targets(SSIDs=()):
     """Stop/start the necessary systemd targets for the given list of SSIDs."""
     systemd_unit_names = [u.name for u in get_systemd_units(unit_type=SYSTEMD_UNIT_TYPE, startswith=SYSTEMD_UNIT_PREFIX)]
     escaped_SSIDs = [systemd_escape(ssid) for ssid in SSIDs]
@@ -149,6 +149,10 @@ def on_network_update(nm, interface, signal, state):
         # Don't care about these intermediary connecting state, nor the finished disconnecting state
         # NOTE: We use the the disconnecting state because it's the only time we can see what SSIDs are being disconnected
         pass
+    elif state == NetworkManager.NM_STATE_ASLEEP:
+        # This triggers when suspending and all WiFi connections are being deactivated.
+        # NetworkManager does *not* send the DEACTIVATING signal for any of them when this happens.
+        bulk_update_systemd_targets()
     else:
         raise NotImplementedError(f"Unknown NM_STATE {state}")
 
