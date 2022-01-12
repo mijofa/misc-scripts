@@ -17,7 +17,8 @@ import systemd.daemon
 # import pystemd
 
 SYSTEMD_UNIT_TYPE = 'target'
-SYSTEMD_UNIT_PREFIX = 'nm-wifi-ssid@'
+SYSTEMD_VPN_UNIT_PREFIX = 'nm-vpn-id@'
+SYSTEMD_WIFI_UNIT_PREFIX = 'nm-wifi-ssid@'
 
 
 systemd_unit_info = collections.namedtuple('systemd_unit', field_names=[
@@ -74,98 +75,111 @@ def systemd_escape(string_to_escape):
     return ''.join(escaped_string)
 
 
-def get_systemd_units(unit_type=None, unit_state=None, startswith=None):
+def get_systemd_units(unit_type=None, unit_state=(), startswith=()):
     """Get systemd units with option filtering."""
     all_units = (systemd_unit_info(*u) for u in systemd1_manager.ListUnits())
     for unit in all_units:
         if unit_type and unit.name.rpartition('.')[-1] != unit_type:
             continue
-        if unit_state and unit_state not in (unit.load, unit.active, unit.sub):
+        if unit_state and not any(s in (unit.load, unit.active, unit.sub) for s in unit_state):
             continue
-        if startswith and not unit.name.startswith(startswith):
+        if startswith and not any((unit.name.startswith(prefix) for prefix in startswith)):
             continue
         yield unit
 
 
-def bulk_update_systemd_targets(SSIDs=()):
+def bulk_update_systemd_targets(*connections):
     """Stop/start the necessary systemd targets for the given list of SSIDs."""
-    systemd_unit_names = [u.name for u in get_systemd_units(unit_type=SYSTEMD_UNIT_TYPE, startswith=SYSTEMD_UNIT_PREFIX)]
-    escaped_SSIDs = [systemd_escape(ssid) for ssid in SSIDs]
+    systemd_unit_names = [u.name for u in get_systemd_units(unit_type=SYSTEMD_UNIT_TYPE,
+                                                            unit_state=('active',),
+                                                            startswith=(SYSTEMD_WIFI_UNIT_PREFIX, SYSTEMD_VPN_UNIT_PREFIX))]
 
-    # Start the necessary units that are not already running
-    for ssid in escaped_SSIDs:
-        if f'{SYSTEMD_UNIT_PREFIX}{ssid}.{SYSTEMD_UNIT_TYPE}' not in systemd_unit_names:
-            systemd1_manager.StartUnit(f'{SYSTEMD_UNIT_PREFIX}{systemd_escape(ssid)}.{SYSTEMD_UNIT_TYPE}', 'fail')
+    # Start any units that might need starting, and keep track of which ones got started
+    needed_unit_names = []
+    for conn in connections:
+        if unit_name := update_target_for_connection(*conn):
+            needed_unit_names.append(unit_name)
 
     # Stop the running units that should not be running
     for unit_name in systemd_unit_names:
-        ssid = unit_name.partition('@')[2].rpartition('.')[0]
-        if ssid not in escaped_SSIDs:
+        if unit_name not in needed_unit_names:
+            print("Stopping unit", unit_name)
             systemd1_manager.StopUnit(unit_name, 'fail')
 
 
-def get_current_SSIDs():
+def update_target_for_connection(conn_type, conn_state, conn_id):
     """
-    Get the connection state of all currently active SSIDs.
+    Start/stop the associated systemd unit for the given connection.
 
-    Ignores all ActiveConnections without SSIDs.
+    NOTE: This doesn't care whether the unit is currently running or not,
+          since systemd ensures nothing happens if I tell it to go to the state it's already in.
     """
-    for active_connection in NetworkManager.NetworkManager.ActiveConnections:
+    if conn_type in ('wireguard', 'vpn'):
+        prefix = SYSTEMD_VPN_UNIT_PREFIX
+    else:
+        # FIXME: There's a type for this, use an elif for it, then raise NotImplementedError on else
+        prefix = SYSTEMD_WIFI_UNIT_PREFIX
+
+    unit_name = f'{prefix}{systemd_escape(conn_id)}.{SYSTEMD_UNIT_TYPE}'
+
+    if conn_state in (NetworkManager.NM_ACTIVE_CONNECTION_STATE_ACTIVATING,
+                      NetworkManager.NM_ACTIVE_CONNECTION_STATE_ACTIVATED):
+        print("Starting unit", unit_name)
+        systemd1_manager.StartUnit(unit_name, 'fail')
+        return unit_name
+    else:
+        print("Stopping unit", unit_name)
+        systemd1_manager.StopUnit(unit_name, 'fail')
+        return False
+
+
+def get_current_connections(active_connections=None):
+    """
+    Get the connection state of all currently active WiFi & VPN connections.
+
+    Ignores any that it can't find the identifier.
+    """
+    if active_connections is None:
+        active_connections = NetworkManager.NetworkManager.ActiveConnections
+
+    for conn in active_connections:
         try:
-            ssid = active_connection.Connection.GetSettings().get('802-11-wireless', {}).get('ssid')
+            settings = conn.Connection.GetSettings()
+            ssid = settings.get('802-11-wireless', {}).get('ssid')
+            conn_id = settings.get('connection', {}).get('id')
+
             if ssid:
-                yield (active_connection.State, ssid)
+                yield (settings.get('connection', {}).get('type'), conn.State, ssid)
+            elif 'vpn' in settings or 'wireguard' in settings:
+                # Not a WiFi connection, maybe VPN though
+                yield (settings.get('connection', {}).get('type'), conn.State, conn_id)
         except NetworkManager.ObjectVanished:
             # ActiveConnection disappeared while we were processing the info.
             # We can't do anything about it, so just ignore it
             pass
 
 
-def on_network_update(nm, interface, signal, state):
+def on_properties_change(nm, interface, signal, properties):
     """Handle the OnStateChanged callback."""
     assert nm is NetworkManager.NetworkManager
     assert interface == 'org.freedesktop.NetworkManager'
-    assert signal == 'StateChanged'
+    assert signal == 'PropertiesChanged'
 
-    if state in (NetworkManager.NM_STATE_DISCONNECTING,
-                 NetworkManager.NM_STATE_CONNECTED_LOCAL,
-                 NetworkManager.NM_STATE_CONNECTED_SITE,
-                 NetworkManager.NM_STATE_CONNECTED_GLOBAL):
-        for connection_state, ssid in get_current_SSIDs():
-            if connection_state == NetworkManager.NM_ACTIVE_CONNECTION_STATE_DEACTIVATING:
-                systemd1_manager.StopUnit(f'{SYSTEMD_UNIT_PREFIX}{systemd_escape(ssid)}.{SYSTEMD_UNIT_TYPE}', 'fail')
-            elif connection_state == NetworkManager.NM_ACTIVE_CONNECTION_STATE_ACTIVATED:
-                systemd1_manager.StartUnit(f'{SYSTEMD_UNIT_PREFIX}{systemd_escape(ssid)}.{SYSTEMD_UNIT_TYPE}', 'fail')
-            elif connection_state in (NetworkManager.NM_ACTIVE_CONNECTION_STATE_ACTIVATING,
-                                      NetworkManager.NM_ACTIVE_CONNECTION_STATE_DEACTIVATED):
-                # Don't care about these intermediary connecting state, nor the finished disconnecting state
-                # NOTE: We use the the disconnecting state because it's the only time we can see what SSIDs are being disconnected
-                # FIXME: I'm only ignoring these because there was what looked like race conditions that I don't understand
-                pass
-            else:
-                raise NotImplementedError(f"Unknown NM_ACTIVE_CONNECTION_STATE {connection_state}")
-    elif state in (NetworkManager.NM_STATE_CONNECTING,
-                   NetworkManager.NM_STATE_DISCONNECTED):
-        # Don't care about these intermediary connecting state, nor the finished disconnecting state
-        # NOTE: We use the the disconnecting state because it's the only time we can see what SSIDs are being disconnected
-        pass
-    elif state == NetworkManager.NM_STATE_ASLEEP:
-        # This triggers when suspending and all WiFi connections are being deactivated.
-        # NetworkManager does *not* send the DEACTIVATING signal for any of them when this happens.
-        bulk_update_systemd_targets()
-    else:
-        raise NotImplementedError(f"Unknown NM_STATE {state}")
+    # I only care about this one property
+    if properties.get('ActiveConnections'):
+        bulk_update_systemd_targets(*get_current_connections(properties['ActiveConnections']))
+    # if properties.get('ActivatingConnection'):
+    #     print(get_current_connections([properties['ActivatingConnection']]))
 
 
-NetworkManager.NetworkManager.OnStateChanged(on_network_update)
-bulk_update_systemd_targets(
-    (ssid for state, ssid in get_current_SSIDs() if state == NetworkManager.NM_ACTIVE_CONNECTION_STATE_ACTIVATED))
+NetworkManager.NetworkManager.OnPropertiesChanged(on_properties_change)
+bulk_update_systemd_targets(*get_current_connections())
 loop = GLib.MainLoop()
 
 
 def cleanup(*args, **kwargs):
     """Cleanup our mess on exit."""
-    bulk_update_systemd_targets([])  # Easiest way to stop all units we control
+    bulk_update_systemd_targets()  # Easiest way to stop all units we control
     loop.quit()
 
 
