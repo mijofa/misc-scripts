@@ -1,0 +1,19 @@
+[Unit]
+# FIXME: Make this a 'dbus' activated unit
+Description=Mute state notifier
+Conflicts=exit.target
+PartOf=pulseaudio.service
+After=pulseaudio.service
+
+[Service]
+# Python3 defaults to quite a large buffer for stdout/stderr.
+# This makes the journal significantly less useful for debugging because the log messages don't appear immediately.
+Environment=PYTHONUNBUFFERED=LiterallyAnyNonZeroString
+ExecStart=%h/vcs/misc-scripts/pa-vol-locklights.py
+
+Restart=on-failure
+RestartSec=30
+StartLimitBurst=0
+
+[Install]
+WantedBy=graphical-session.target
