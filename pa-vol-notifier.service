@@ -3,6 +3,7 @@
 Description=Volume notification daemon for PulseAudio changes
 Conflicts=exit.target
 PartOf=pulseaudio.service
+After=pulseaudio.service
 
 [Service]
 # Python3 defaults to quite a large buffer for stdout/stderr.
