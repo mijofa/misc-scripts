@@ -10,9 +10,8 @@ PartOf=pulseaudio.service
 Environment=PYTHONUNBUFFERED=LiterallyAnyNonZeroString
 ExecStart=%h/vcs/misc-scripts/pa-vol-notifier.py
 
-## FIXME: these are copied from most of PrisonPC's systemd jobs, but apparently are "NOT APPROPRIATE for" any of them
 Restart=on-failure
-RestartSec=30s
+RestartSec=1
 StartLimitBurst=0
 
 [Install]
