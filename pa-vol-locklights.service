@@ -9,7 +9,26 @@ After=pulseaudio.service
 # Python3 defaults to quite a large buffer for stdout/stderr.
 # This makes the journal significantly less useful for debugging because the log messages don't appear immediately.
 Environment=PYTHONUNBUFFERED=LiterallyAnyNonZeroString
+
+# Disable the Caps Lock key, because if we're using this, then accidental bumping will get the LEDs out of sync
+ExecStartPre=/usr/bin/setxkbmap -option ctrl:nocaps
+# But capslock is still useful sometimes, so enable it by pressing *both* shift keys at once
+ExecStartPre=/usr/bin/setxkbmap -option shift:both_capslock_cancel
+
+# Similar with Num Lock, but since there's no easy option for that I gotta cheat my way around it
+# This disables the Num Lock *feature* entirely by forcing it to behave the same regardless
+ExecStartPre=/usr/bin/setxkbmap -option numpad:mac
+# this remaps the Num Lock key to only work if using the shift modifier
+ExecStartPre=/usr/bin/xmodmap -e 'keycode 77 = NoSymbol Num_Lock'
+# and this allows Shift+Num Lock to make the numpad control the mouse, which is sometimes useful
+ExecStartPre=/usr/bin/setxkbmap -option keypad:pointerkeys
+
 ExecStart=%h/vcs/misc-scripts/pa-vol-locklights.py
+
+# Undo all that when we finish
+ExecStopPost=/usr/bin/xmodmap -e 'keycode 77 = Num_Lock'
+# FIXME: This doesn't just unset the options we set, but rather it resets all options
+ExecStopPost=/usr/bin/setxkbmap -option
 
 Restart=on-failure
 RestartSec=30
