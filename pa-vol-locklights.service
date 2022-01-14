@@ -14,19 +14,25 @@ Environment=PYTHONUNBUFFERED=LiterallyAnyNonZeroString
 # But it won't set them immediately, so I still have to set them myself
 # FIXME: Can I somehow trigger XFCE to apply this?
 # FIXME: This throws away everything XFCE may already have set
-ExecStartPre=xfconf-query --channel keyboard-layout --property '/Default/XkbOptions/Compose' --set "ctrl:nocaps,shift:both_capslock_cancel,numpad:mac,keypad:pointerkeys"
+# FIXME: Must be manually kept in sync with the setxkbmap lines below
+ExecStartPre=xfconf-query --channel keyboard-layout --property '/Default/XkbOptions/Compose' --set "shift:both_capslock_cancel,numpad:mac"
 
 # Disable the Caps Lock key, because if we're using this, then accidental bumping will get the LEDs out of sync
-ExecStartPre=/usr/bin/setxkbmap -option ctrl:nocaps
+#ExecStartPre=/usr/bin/setxkbmap -option ctrl:nocaps
+# Removed in favour of remapping it via xmodmap
+
 # But capslock is still useful sometimes, so enable it by pressing *both* shift keys at once
 ExecStartPre=/usr/bin/setxkbmap -option shift:both_capslock_cancel
 # Similar with Num Lock, but since there's no easy option for that I gotta cheat my way around it
-# This disables the Num Lock *feature* entirely by forcing it to behave the same regardless
+# This disables the Num Lock feature (not the button itself) entirely by forcing it to behave the same regardless
 ExecStartPre=/usr/bin/setxkbmap -option numpad:mac
-# and this allows Shift+Num Lock to make the numpad control the mouse, which is sometimes useful
+# and this allows Shift+Num Lock to make the numpad control the mouse,
+# which is more useful than putting arrow keys and such on there
 ExecStartPre=/usr/bin/setxkbmap -option keypad:pointerkeys
-# this remaps the Num Lock key to only work if using the shift modifier
-ExecStartPre=/usr/bin/xmodmap -e 'keycode 77 = Escape Num_Lock'
+
+# Remap both lock keys to control the mute state, because why not
+ExecStartPre=/usr/bin/xmodmap -e 'keycode 77 = XF86AudioMicMute Pointer_EnableKeys'
+ExecStartPre=/usr/bin/xmodmap -e 'keycode 66 = XF86AudioMute Caps_Lock'
 
 ExecStart=%h/vcs/misc-scripts/pa-vol-locklights.py
 
