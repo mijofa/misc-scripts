@@ -31,12 +31,14 @@ icons = {
         'low': icon_theme.load_icon('notification-audio-volume-low', ICON_SIZE, 0).copy(),
         'medium': icon_theme.load_icon('notification-audio-volume-medium', ICON_SIZE, 0).copy(),
         'high': icon_theme.load_icon('notification-audio-volume-high', ICON_SIZE, 0).copy(),
+        'too-high': icon_theme.load_icon('audio-speaker-left-side-testing', ICON_SIZE, 0).copy(),
     },
     'source': {
         'muted': icon_theme.load_icon('notification-microphone-sensitivity-muted', ICON_SIZE, 0).copy(),
         'low': icon_theme.load_icon('notification-microphone-sensitivity-low', ICON_SIZE, 0).copy(),
         'medium': icon_theme.load_icon('notification-microphone-sensitivity-medium', ICON_SIZE, 0).copy(),
         'high': icon_theme.load_icon('notification-microphone-sensitivity-high', ICON_SIZE, 0).copy(),
+        'too-high': icon_theme.load_icon('audio-microphone', ICON_SIZE, 0).copy(),
     },
 }
 
@@ -57,6 +59,8 @@ class NotificationController(object):
     def _get_icon_name_for_volume(self, muted, vol_percentage):
         if muted:
             return 'muted'
+        elif vol_percentage > 1:
+            return 'too-high'
         elif vol_percentage >= ((1 / 3) * 2):
             return 'high'
         elif vol_percentage >= (1 / 3):
