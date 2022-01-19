@@ -4,12 +4,13 @@ Watch for changes to pulseaudio volumes and send a libnotify message accordingly
 
 NOTE: Depends on module-dbus-protocol being loaded into PulseAudio
 """
-import glob
+# import glob
 import os
-import subprocess
+# import subprocess
 
 import dbus
 import dbus.mainloop.glib
+import evdev
 
 from gi.repository import GLib
 
@@ -44,37 +45,122 @@ class PulseHandler(object):
                                                             self.pulse_core.Get("org.PulseAudio.Core1", "FallbackSource"))
 
         # Update notification of the initial state
-        self.set_mute_output(initial_fallback_sink.Get("org.PulseAudio.Core1.Device", "Mute"))
-        self.set_mute_input(initial_fallback_source.Get("org.PulseAudio.Core1.Device", "Mute"))
+        # self.output_muted = bool(initial_fallback_sink.Get("org.PulseAudio.Core1.Device", "Mute"))
+        # self.input_muted = bool(initial_fallback_source.Get("org.PulseAudio.Core1.Device", "Mute"))
+        self._mute_update_handler(new_mute=initial_fallback_sink.Get("org.PulseAudio.Core1.Device", "Mute"),
+                                  dev_path=self.pulse_core.Get("org.PulseAudio.Core1", "FallbackSink"))
+        self._mute_update_handler(new_mute=initial_fallback_source.Get("org.PulseAudio.Core1.Device", "Mute"),
+                                  dev_path=self.pulse_core.Get("org.PulseAudio.Core1", "FallbackSource"))
 
         # Recieve future updates of the mute state
         # FIXME: Also watch for Fallback updates, because we might switch from a muted device to an unmuted one,
-        self.pulse_bus.add_signal_receiver(handler_function=self.mute_update, signal_name='MuteUpdated', path_keyword='dev_path')
+        self.pulse_bus.add_signal_receiver(handler_function=self._mute_update_handler,
+                                           signal_name='MuteUpdated', path_keyword='dev_path')
 
-    def mute_update(self, new_mute, dev_path):
+    def _mute_update_handler(self, new_mute, dev_path):
         """Handle mute state change by determining whether we even care about this device."""
         # Only do something if it's one of the default/fallback devices
         if dev_path == self.pulse_core.Get("org.PulseAudio.Core1", "FallbackSink"):
-            self.set_mute_output(bool(new_mute))
+            self.output_muted = bool(new_mute)
+            # self.set_mute_output(bool(new_mute))
         elif dev_path == self.pulse_core.Get("org.PulseAudio.Core1", "FallbackSource"):
-            self.set_mute_input(bool(new_mute))
+            self.input_muted = bool(new_mute)
+            # self.set_mute_input(bool(new_mute))
         else:
             print("Don't care about this device", dev_path, new_mute)
 
-    def set_mute_output(self, state):
-        """Handle mute statuse change for the default output device."""
-        # NOTE: check_call does not allow input=
-        subprocess.check_output(['sudo', 'tee'] + glob.glob('/sys/class/leds/*::capslock/brightness'),
-                                text=True, input=('1' if state else '0'))
+    def _mute_toggle(self, device_path):
+        """Toggle mute state on the given device path."""
+        device = self.pulse_bus.get_object("org.PulseAudio.Core1.Device",
+                                           device_path)
+        old_mute = bool(device.Get("org.PulseAudio.Core1.Device", "Mute"))
+        device.Set("org.PulseAudio.Core1.Device", "Mute", dbus.Boolean(not old_mute, variant_level=1))
 
-    def set_mute_input(self, state):
-        """Handle mute statuse change for the default input device."""
-        # NOTE: check_call does not allow input=
-        subprocess.check_output(['sudo', 'tee'] + glob.glob('/sys/class/leds/*::numlock/brightness'),
-                                text=True, input=('1' if state else '0'))
+        self._mute_update_handler(new_mute=device.Get("org.PulseAudio.Core1.Device", "Mute"),
+                                  dev_path=device_path)
+
+    def mute_output_toggle(self):
+        """Toggle mute state on the the current default output sink."""
+        self._mute_toggle(self.pulse_core.Get("org.PulseAudio.Core1", "FallbackSink"))
+
+    def mute_input_toggle(self):
+        """Toggle mute state on the the current default input source."""
+        self._mute_toggle(self.pulse_core.Get("org.PulseAudio.Core1", "FallbackSource"))
+
+
+class KeyboardHandler(object):
+    """Handle keyboard events for mute state hotkeys."""
+
+    handler_timeout = None
+
+    def __init__(self, dev_path, caps_mapping, pulse_handler):
+        """Set up the device event loop if the capabilities match."""
+        self.caps_mapping = caps_mapping
+        self.pulse_handler = pulse_handler
+
+        self.device = evdev.InputDevice(dev_path)
+
+        if self._is_capable_of(caps_mapping):
+            # Every 0.1 seconds is good enough
+            self.handler_timeout = GLib.timeout_add(100, self._handle_events)
+        else:
+            self.device.close()
+
+    def close(self):
+        """Remove the timeouts from the main loop."""
+        # FIXME: Does this even work?
+        if self.handler_timeout:
+            GLib.Source.remove(self.handler_timeout)
+
+    def _is_capable_of(self, caps_mapping):
+        """
+        Compare device capabilities to the required capabilities mapping.
+
+        This looks for any one capability,
+        so if you're looking for both vol+ & vol-,
+        but the device only has vol+ it will still return True.
+        """
+        dev_caps = self.device.capabilities()
+        for cap_type in caps_mapping:
+            if cap_type not in dev_caps.keys():
+                continue
+            for cap in caps_mapping[cap_type].keys():
+                if cap in dev_caps.get(cap_type):
+                    return True
+
+        return False
+
+    def _handle_events(self):
+        """Handle whatever events are currently in the queue."""
+        try:
+            for event in self.device.read():
+                if event.value == 2:
+                    # Key repeat event, we don't care
+                    continue
+                mapped_cap = self.caps_mapping.get(event.type, {}).get(event.code, None)
+                if event.value and mapped_cap:
+                    mapped_cap()
+        except BlockingIOError:
+            # Just means there's nothing to read at the moment
+            pass
+
+        self.device.set_led(evdev.ecodes.LED_CAPSL, self.pulse_handler.output_muted)
+        self.device.set_led(evdev.ecodes.LED_NUML, self.pulse_handler.input_muted)
+
+        return True  # Needed to make GLib rerun the function on the next timeout
 
 
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-PulseHandler()
+pulse_handler = PulseHandler()
+
+# FIXME: Make all the keyboard handling stuff disablable via command line arguments
+caps_mapping = {evdev.ecodes.EV_LED: {evdev.ecodes.LED_NUML: None,
+                                      evdev.ecodes.LED_CAPSL: None},
+                evdev.ecodes.EV_KEY: {evdev.ecodes.KEY_NUMLOCK: pulse_handler.mute_input_toggle,
+                                      evdev.ecodes.KEY_CAPSLOCK: pulse_handler.mute_output_toggle}}
+dev_handlers = []
+for dev_path in evdev.list_devices():
+    dev_handlers.append(KeyboardHandler(dev_path, caps_mapping, pulse_handler))
+
 GLib.MainLoop().run()

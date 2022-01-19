@@ -3,7 +3,7 @@
 Description=Mute state notifier
 Conflicts=exit.target
 PartOf=pulseaudio.service
-After=pulseaudio.service
+After=pulseaudio.service pass-ssh-add.service
 
 [Service]
 # Python3 defaults to quite a large buffer for stdout/stderr.
@@ -15,11 +15,10 @@ Environment=PYTHONUNBUFFERED=LiterallyAnyNonZeroString
 # FIXME: Can I somehow trigger XFCE to apply this?
 # FIXME: This throws away everything XFCE may already have set
 # FIXME: Must be manually kept in sync with the setxkbmap lines below
-ExecStartPre=xfconf-query --channel keyboard-layout --property '/Default/XkbOptions/Compose' --set "shift:both_capslock_cancel,numpad:mac"
+ExecStartPre=xfconf-query --channel keyboard-layout --property '/Default/XkbOptions/Compose' --set "ctrl:nocaps,shift:both_capslock_cancel,numpad:mac"
 
 # Disable the Caps Lock key, because if we're using this, then accidental bumping will get the LEDs out of sync
-#ExecStartPre=/usr/bin/setxkbmap -option ctrl:nocaps
-# Removed in favour of remapping it via xmodmap
+ExecStartPre=/usr/bin/setxkbmap -option ctrl:nocaps
 
 # But capslock is still useful sometimes, so enable it by pressing *both* shift keys at once
 ExecStartPre=/usr/bin/setxkbmap -option shift:both_capslock_cancel
@@ -30,14 +29,8 @@ ExecStartPre=/usr/bin/setxkbmap -option numpad:mac
 # which is more useful than putting arrow keys and such on there
 ExecStartPre=/usr/bin/setxkbmap -option keypad:pointerkeys
 
-# Remap both lock keys to control the mute state, because why not
-ExecStartPre=/usr/bin/xmodmap -e 'keycode 77 = XF86AudioMicMute Pointer_EnableKeys'
-ExecStartPre=/usr/bin/xmodmap -e 'keycode 66 = XF86AudioMute Caps_Lock'
-
 ExecStart=%h/vcs/misc-scripts/pa-vol-locklights.py
 
-# Undo all that when we finish
-ExecStopPost=/usr/bin/xmodmap -e 'keycode 77 = Num_Lock'
 # FIXME: This doesn't just unset the options we set, but rather it resets all options
 ExecStopPost=/usr/bin/setxkbmap -option
 ExecStopPost=xfconf-query --channel keyboard-layout --property '/Default/XkbOptions/Compose' --set ""
