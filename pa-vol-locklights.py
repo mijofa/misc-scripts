@@ -144,8 +144,8 @@ class KeyboardHandler(object):
             # Just means there's nothing to read at the moment
             pass
 
-        self.device.set_led(evdev.ecodes.LED_CAPSL, self.pulse_handler.output_muted)
-        self.device.set_led(evdev.ecodes.LED_NUML, self.pulse_handler.input_muted)
+        self.device.set_led(evdev.ecodes.LED_NUML, self.pulse_handler.output_muted)
+        self.device.set_led(evdev.ecodes.LED_CAPSL, self.pulse_handler.input_muted)
 
         return True  # Needed to make GLib rerun the function on the next timeout
 
@@ -157,8 +157,8 @@ pulse_handler = PulseHandler()
 # FIXME: Make all the keyboard handling stuff disablable via command line arguments
 caps_mapping = {evdev.ecodes.EV_LED: {evdev.ecodes.LED_NUML: None,
                                       evdev.ecodes.LED_CAPSL: None},
-                evdev.ecodes.EV_KEY: {evdev.ecodes.KEY_NUMLOCK: pulse_handler.mute_input_toggle,
-                                      evdev.ecodes.KEY_CAPSLOCK: pulse_handler.mute_output_toggle}}
+                evdev.ecodes.EV_KEY: {evdev.ecodes.KEY_NUMLOCK: pulse_handler.mute_output_toggle,
+                                      evdev.ecodes.KEY_CAPSLOCK: pulse_handler.mute_input_toggle}}
 dev_handlers = []
 for dev_path in evdev.list_devices():
     dev_handlers.append(KeyboardHandler(dev_path, caps_mapping, pulse_handler))
