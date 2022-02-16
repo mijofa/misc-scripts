@@ -7,6 +7,8 @@ PartOf=graphical-session.target
 # Python3 defaults to quite a large buffer for stdout/stderr.
 # This makes the journal significantly less useful for debugging because the log messages don't appear immediately.
 Environment=PYTHONUNBUFFERED=LiterallyAnyNonZeroString
+# I want my eraser button to trigger a right-click mouse action in X11
+ExecStartPre=xsetwacom -s --set "Wacom HID 5285 Pen eraser" Button 1 'Button +3'
 ExecStart=%h/vcs/misc-scripts/randr-watch-changes.py
 
 ## FIXME: these are copied from most of PrisonPC's systemd jobs, but apparently are "NOT APPROPRIATE for" any of them
