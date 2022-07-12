@@ -107,3 +107,8 @@ Allowing for running systemd units on only specific WiFi networks.
 For now I only use it for `an2linux <https://github.com/rootkiwi/an2linuxserver>`_ and `x2x <https://github.com/dottedmag/x2x>`_,
 but a few other use-cases could be to only run time-sheeting daemon while at work (FIXME: is "not at home" viable with this?),
 or mounting a bulk storage NAS when on the home network with that NAS.
+
+what-days-was-I-in-the-office.py
+================================
+Read the Google Takeout data of location history to determine what days of the week I was in the office.
+Intended to help with determining tax info for working-from-home rebates.
