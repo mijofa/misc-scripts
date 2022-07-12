@@ -32,7 +32,7 @@ systemd_unit_info = collections.namedtuple('systemd_unit', field_names=[
     'unit_object_path',  # The unit object path
     'job_id',            # If there is a job queued for the job unit, the numeric job id, 0 otherwise
     'job_type',          # The job type as string
-    'job_objet_path'     # The job object path
+    'job_object_path'    # The job object path
 ])
 
 
