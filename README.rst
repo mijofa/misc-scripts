@@ -10,10 +10,12 @@ Installation
 1. Update the default SMTP-SERVER and RECIPIENT (search for "REPLACEME")
 2. Copy magnet-handler.py to somewhere in your $PATH
    NOTE: Remove the '.py' extension when doing so
+
 4. Install the .desktop file into your environment::
 
-    xdg-desktop-menu install --novendor magnethandler.desktop
-    xdg-mime default magnethandler.desktop x-scheme-handler/magnet  # 'magnethandler.desktop' here should never have a path, as it does not refer to the file in current directory but rather the file after installation in the previous line.
+       xdg-desktop-menu install --novendor magnethandler.desktop
+       xdg-mime default magnethandler.desktop x-scheme-handler/magnet  # 'magnethandler.desktop' here should never have a path, as it does not refer to the file in current directory but rather the file after installation in the previous line.
+
 
 find_win (OBSOLETE)
 ===================
@@ -112,3 +114,18 @@ what-days-was-I-in-the-office.py
 ================================
 Read the Google Takeout data of location history to determine what days of the week I was in the office.
 Intended to help with determining tax info for working-from-home rebates.
+
+
+
+
+
+Hoyts seating screenshots
+=========================
+This one isn't a script in the repo (yet?) I just wanted somewhere to note this little JS snippet for using in future as I've had to recreate it from scratch a few times now.
+
+I organise a bunch of cinema trips with friends, and I like to update the event page with a screenshot of what seats each of us have bought so that the group can stick together while buying their own tickets.
+Rather than taking the previous screenshot and editing it with Gimp or something, I'll just go to the session page and "buy" a new ticket, then stop at the seating chart and edit the CSS to mark our seats as "selected" instead of "taken".
+Pasting this snippet into the Chrome console will do all that with a simple one-liner instead of needing to go through each element manually::
+
+    // Replace G9-G13 with the group's selected seat IDs
+    ['G9', 'G10', 'G11', 'G12', 'G13'].forEach((seat, all) => $(`div[data-seat-number=${seat}]`).addClass('selected'))
