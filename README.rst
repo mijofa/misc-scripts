@@ -127,5 +127,5 @@ I organise a bunch of cinema trips with friends, and I like to update the event 
 Rather than taking the previous screenshot and editing it with Gimp or something, I'll just go to the session page and "buy" a new ticket, then stop at the seating chart and edit the CSS to mark our seats as "selected" instead of "taken".
 Pasting this snippet into the Chrome console will do all that with a simple one-liner instead of needing to go through each element manually::
 
-    // Replace G9-G13 with the group's selected seat IDs
-    ['G9', 'G10', 'G11', 'G12', 'G13'].forEach((seat, all) => $(`div[data-seat-number=${seat}]`).addClass('selected'))
+    // Replace H9-H11 with the group's selected seat IDs
+    ['H9', 'H10', 'H11'].forEach((seat, all) => $(`button:has(svg[title=${seat}])`).classList.add('is-selected'))
