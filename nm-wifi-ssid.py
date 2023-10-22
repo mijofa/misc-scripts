@@ -159,20 +159,23 @@ def get_current_connections(active_connections=None):
             pass
 
 
-def on_properties_change(nm, interface, signal, properties):
-    """Handle the OnStateChanged callback."""
-    assert nm is NetworkManager.NetworkManager
-    assert interface == 'org.freedesktop.NetworkManager'
-    assert signal == 'PropertiesChanged'
+def on_change(*args, **kwargs):
+    """Just update everything when anything changes."""
+    # assert nm is NetworkManager.NetworkManager
+    # assert interface == 'org.freedesktop.NetworkManager'
+    # assert signal == 'PropertiesChanged'
 
-    # I only care about this one property
-    if properties.get('ActiveConnections'):
-        bulk_update_systemd_targets(*get_current_connections(properties['ActiveConnections']))
-    # if properties.get('ActivatingConnection'):
-    #     print(get_current_connections([properties['ActivatingConnection']]))
+    bulk_update_systemd_targets(*get_current_connections())
 
 
-NetworkManager.NetworkManager.OnPropertiesChanged(on_properties_change)
+# org.freedesktop.DBus.Properties.PropertiesChanged
+#NetworkManager.NetworkManager.OnPropertiesChanged(on_properties_change)
+#NetworkManager.NetworkManager.connect_to_signal("PropertiesChanged", on_properties_change)
+# FIXME: What of these do I **actually** care about?
+#        https://mail.gnome.org/archives/networkmanager-list/2021-July/msg00013.html
+NetworkManager.NetworkManager.OnStateChanged(on_change)
+NetworkManager.NetworkManager.OnDeviceAdded(on_change)
+NetworkManager.NetworkManager.OnDeviceRemoved(on_change)
 bulk_update_systemd_targets(*get_current_connections())
 loop = GLib.MainLoop()
 
