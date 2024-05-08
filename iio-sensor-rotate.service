@@ -1,0 +1,23 @@
+[Unit]
+Description=Auto-rotate screen based on accelerometer info
+After=basic.target dbus.socket
+Conflicts=exit.target
+
+[Service]
+Type=simple
+# Python3 defaults to quite a large buffer for stdout/stderr.
+# This makes the journal significantly less useful for debugging because the log messages don't appear immediately.
+Environment=PYTHONUNBUFFERED=LiterallyAnyNonZeroString
+ExecStart=%h/vcs/misc-scripts/iio-sensor-rotate.py
+# Reset rotation back to normal
+ExecStopPost=xrandr --output eDP-1 --rotation normal
+# Hide the on-screen keyboard
+ExecStopPost=dbus-send --type=method_call --print-reply --dest=org.onboard.Onboard /org/onboard/Onboard/Keyboard org.onboard.Onboard.Keyboard.Hide
+
+## FIXME: these are copied from most of PrisonPC's systemd jobs, but apparently are "NOT APPROPRIATE for" any of them
+Restart=on-failure
+RestartSec=30s
+StartLimitBurst=0
+
+# [Install]
+# WantedBy=graphical-session.target
