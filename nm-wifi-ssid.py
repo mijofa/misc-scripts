@@ -173,6 +173,8 @@ def on_change(*args, **kwargs):
 #NetworkManager.NetworkManager.connect_to_signal("PropertiesChanged", on_properties_change)
 # FIXME: What of these do I **actually** care about?
 #        https://mail.gnome.org/archives/networkmanager-list/2021-July/msg00013.html
+# FIXME: Disconnecting from a fortinet VPN is not being noticed here until something else triggers an update.
+#        I suspect there's a different trigger I should be working with for that.
 NetworkManager.NetworkManager.OnStateChanged(on_change)
 NetworkManager.NetworkManager.OnDeviceAdded(on_change)
 NetworkManager.NetworkManager.OnDeviceRemoved(on_change)
