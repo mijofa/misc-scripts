@@ -54,7 +54,7 @@ ROTATION_MAP = {
 }
 
 if __name__ == '__main__':
-    if not 'DISPLAY' in os.environ:
+    if 'DISPLAY' not in os.environ:
         raise Exception("Need an X11 session to work with")
 
     # FIXME: monitor-sensor is just a DBUS client,
@@ -70,6 +70,9 @@ if __name__ == '__main__':
                                           '--rotation', ROTATION_MAP[new_rotation]])
         elif line.strip().startswith('=== Has accelerometer (orientation:'):
             init_rotation = line.strip().rsplit(maxsplit=1)[-1].strip(')')
+            if init_rotation == 'undefined':
+                # Sometimes (most of the time) it takes a moment after initialisation for the accelerometer to provide useful info
+                pass
             subprocess.check_output(args=['xrandr',
                                           '--output', 'eDP-1',
                                           '--rotation', ROTATION_MAP[init_rotation]])
