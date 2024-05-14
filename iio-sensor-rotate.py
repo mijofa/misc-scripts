@@ -72,7 +72,7 @@ if __name__ == '__main__':
             init_rotation = line.strip().rsplit(maxsplit=1)[-1].strip(')')
             if init_rotation == 'undefined':
                 # Sometimes (most of the time) it takes a moment after initialisation for the accelerometer to provide useful info
-                pass
+                continue
             subprocess.check_output(args=['xrandr',
                                           '--output', 'eDP-1',
                                           '--rotation', ROTATION_MAP[init_rotation]])
