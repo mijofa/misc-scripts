@@ -11,6 +11,11 @@
 for project_path in "$@" ; do
     project="${project_path/\/home\/mike\/vcs\//}"
     project_shortcut="code-${project//\//_}.desktop"
+    if [ -f "${project_path}/.vscode/mijofa-shortcut-icon.png" ] ; then
+        project_icon="${project_path}/.vscode/mijofa-shortcut-icon.png"
+    else
+        project_icon="vscode"
+    fi
     sed -e '/^\[Desktop Action/,$d' \
         -e '/^Actions=/d' \
         -e '/^GenericName=/d' \
@@ -18,6 +23,7 @@ for project_path in "$@" ; do
         -e '/^Name=/ s/=.*$/='"${project//\//\\/}"'/' \
         -e '/^Comment=/ s/=.*$/='"${project_path//\//\\/}"'/' \
         -e '/^Exec=/ s/%F/"'"${project_path//\//\\/}"'"/g' \
+        -e '/^Icon=/ s/=.*$/='"${project_icon//\//\\/}"'/' \
         /usr/share/applications/code.desktop >~/.local/share/applications/"$project_shortcut"
 done
 
