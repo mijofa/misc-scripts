@@ -1,0 +1,17 @@
+[Unit]
+Description=Shitty workaround for wireless headset not being detected
+After=pipewire.socket wireplumber.service
+Requires=pipewire.socket
+
+PartOf=graphical-session.target
+Conflicts=exit.target
+
+[Service]
+# Python3 defaults to quite a large buffer for stdout/stderr.
+# This makes the journal significantly less useful for debugging because the log messages don't appear immediately.
+Environment=PYTHONUNBUFFERED=LiterallyAnyNonZeroString
+ExecStart=%h/vcs/misc-scripts/pw-headphones-workaround.py
+Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target
