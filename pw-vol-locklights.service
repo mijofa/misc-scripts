@@ -29,7 +29,7 @@ ExecStartPre=/usr/bin/setxkbmap -option numpad:mac
 # which is more useful than putting arrow keys and such on there
 ExecStartPre=/usr/bin/setxkbmap -option keypad:pointerkeys
 
-ExecStart=%h/vcs/misc-scripts/pa-vol-locklights.py
+ExecStart=%h/vcs/misc-scripts/pw-vol-locklights.py
 
 # FIXME: This doesn't just unset the options we set, but rather it resets all options
 ExecStopPost=/usr/bin/setxkbmap -option
