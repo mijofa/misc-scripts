@@ -50,6 +50,7 @@ async def handle_events(dev):
     icon_theme = Gtk.IconTheme.get_default()
     notif.set_image_from_pixbuf(icon_theme.load_icon('audio-headphones', 64, 0))
     try:
+        dev.grab()  # Grab an exclusive lock on the device so that xfce4-pulseaudio-plugin can't take overS
         async for event in dev.async_read_loop():
             # Don't care what the event is, just change the default audio device
 
@@ -70,11 +71,37 @@ async def handle_events(dev):
                     notif.show()
                     p.default_set(headset_source)
                 notif.set_property('body', '')
+
+                if event.type == evdev.ecodes.EV_KEY and event.value == True:
+                    match event.code:
+                        case evdev.ecodes.KEY_VOLUMEDOWN:
+                            p.volume_change_all_chans(headset_sink, -0.025)
+                        case evdev.ecodes.KEY_VOLUMEUP:
+                            p.volume_change_all_chans(headset_sink, +0.025)
+                        # FIXME: Implement just enough Mpris for this instead of calling out to subprocess?
+                        case evdev.ecodes.KEY_PLAYPAUSE:
+                            playerctl = await asyncio.create_subprocess_exec('playerctl', 'play-pause')
+                            await playerctl.wait()
+                        # I assume these are specific double/hold presses, I don't really use them.
+                        case evdev.ecodes.KEY_NEXTSONG:
+                            playerctl = await asyncio.create_subprocess_exec('playerctl', 'next')
+                            await playerctl.wait()
+                        case evdev.ecodes.KEY_PREVIOUSSONG:
+                            playerctl = await asyncio.create_subprocess_exec('playerctl', 'previous')
+                            await playerctl.wait()
+                        # FIXME: This button doesn't actually exist physically?
+                        case evdev.ecodes.KEY_MUTE:
+                            p.mute(headset_sink, mute=(headset_sink.mute == False))
+                        case _:
+                            print(event)
     except OSError as e:
+        dev.ungrab()  # Release the exclusive lock
         if e.errno == 19:
             print("Looks like device was removed, stopping event handling")
         else:
             raise
+    finally:
+        dev.ungrab()  # Release the exclusive lock
 
 
 # ref: https://github.com/pyudev/pyudev/issues/450#issuecomment-1078863332
