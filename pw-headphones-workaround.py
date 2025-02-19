@@ -3,14 +3,7 @@
 Shitty workaround for system not detecting when the wireless headphones are on/off.
 """
 import asyncio
-import json
-import os
-import pathlib
-import socket
-import subprocess
 import sys
-import time
-import traceback
 import typing
 
 import evdev
@@ -64,12 +57,12 @@ async def handle_events(dev):
                 # headset_card: pulse.PulseCardInfo, = (c for c in p.card_list() if c.name.startswith(f'alsa_card.{DEV_NAME}'))
                 headset_sink, = (s for s in p.sink_list() if s.name.startswith(f'alsa_output.{DEV_NAME}'))
                 headset_source, = (s for s in p.source_list() if s.name.startswith(f'alsa_input.{DEV_NAME}'))
-                if p.server_info().default_sink_name != headset_sink.name:
-                    notif.show()
-                    p.default_set(headset_sink)
                 if p.server_info().default_source_name != headset_source.name:
                     notif.show()
                     p.default_set(headset_source)
+                if p.server_info().default_sink_name != headset_sink.name:
+                    notif.show()
+                    p.default_set(headset_sink)
                 notif.set_property('body', '')
 
                 if event.type == evdev.ecodes.EV_KEY and event.value == True:
