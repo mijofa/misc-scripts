@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """
 I have a number of wireless Logitech devices.
 Some of which it would be nice to know when they turn on/off.
