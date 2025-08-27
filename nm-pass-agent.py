@@ -46,7 +46,8 @@ class PassAgent(NetworkManager.SecretAgent):
         if len(found) > 1:
             # If we've found more than 1 entry, let's see if there's 1 for use on this specific host.
             # Primarily for WiFi environments that use per-client PSKs and similar.
-            hostname = socket.gethostname()
+            # FIXME: wtf does gethostname() often return fqdn when getfqdn() exists?!?
+            hostname = socket.gethostname().split('.', 1)[0]
             # We can't just loop over found and remove each entry that's bogus because then the loop would go wrong,
             # Redefining the list is easier than trying to make a separate exceptions list or something trying to avoid conflict.
             found = [p for p in found if hostname in p.parts]
