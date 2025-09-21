@@ -1,0 +1,3 @@
+^https?://www.facebook.com/share/.*$
+^https?://youtube.com/.*$
+^https?://www.instagram.com/.*$
