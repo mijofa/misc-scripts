@@ -6,10 +6,17 @@ StopWhenUnneeded=true
 [Service]
 Type=simple
 RemainAfterExit=true
+
+# Learn the key that was just plugged
 # NOTE: 'scd serialno' should be unnecessary, but will log what device was plugged in.
 # I'm using '--force' here because I have multiple Yubikeys with the same private key and I need the new one to overwrite the stub.
 # FIXME: Is there unintended dangerous consequences in using '--force'?
-ExecStart=gpg-connect-agent 'scd serialno' 'learn --force' '/bye'
+ExecStartPre=gpg-connect-agent 'scd serialno' 'learn --force' '/bye'
+
+# Forget PIN when the screen is locked, even if the Yubikey is still plugged in
+ExecStart=bash -c 'gdbus monitor --system --dest org.freedesktop.login1 | grep --fixed-strings --line-buffered "org.freedesktop.DBus.Properties.PropertiesChanged (\'org.freedesktop.login1.Session\', {\'LockedHint\': <true>}, @as [])" | while read line ; do echo RELOADAGENT ; done | gpg-connect-agent --unbuffered'
+
+# Lock the screen when the Yubikey is unplugged
 ExecStop=xdg-screensaver lock
 
 [Install]
