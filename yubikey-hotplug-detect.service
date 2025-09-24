@@ -1,0 +1,16 @@
+[Unit]
+Description=Reload GPG stubs on Yubikey hotplug
+After=gpg-agent.socket
+StopWhenUnneeded=true
+
+[Service]
+Type=simple
+RemainAfterExit=true
+# NOTE: 'scd serialno' should be unnecessary, but will log what device was plugged in.
+# I'm using '--force' here because I have multiple Yubikeys with the same private key and I need the new one to overwrite the stub.
+# FIXME: Is there unintended dangerous consequences in using '--force'?
+ExecStart=gpg-connect-agent 'scd serialno' 'learn --force' '/bye'
+ExecStop=xdg-screensaver lock
+
+[Install]
+WantedBy=smartcard.target
