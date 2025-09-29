@@ -1,0 +1,11 @@
+#!/usr/bin/gio launch
+[Desktop Entry]
+Name=Web Browser launcher
+GenericName=Web Browser launcher
+Exec=/home/mike/vcs/misc-scripts/per-url-browser-session.py %u
+Terminal=false
+X-MultipleArgs=false
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=x-scheme-handler/http;x-scheme-handler/https;
+Hidden=true
