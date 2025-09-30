@@ -11,7 +11,7 @@ import re
 user_apps_path = pathlib.Path('~/.local/share/applications/').expanduser()
 
 argparser = argparse.ArgumentParser()
-argparser.add_argument('url', nargs='+')
+argparser.add_argument('url', nargs='*')
 args, other_args = argparser.parse_known_args()
 
 # FIXME: Extend this to other URI schemes?
@@ -38,14 +38,20 @@ for handler in set(h for sublist in mime_handlers.values() for h in sublist):
                 regexp_handlers[re.compile(r)] = shlex.split(handler_config.get(section, 'Exec'))
 
 subprocesses = []
-for url in args.url:
-    # Sort by length of regexp, longest first
-    for regexp in sorted(regexp_handlers, key=lambda r: len(r.pattern), reverse=True):
-        if regexp.match(url):
-            args = regexp_handlers[regexp].copy()
-            args[args.index('%u')] = url
-            subprocesses.append(subprocess.Popen(args))
-            break
+if args.url:
+    for url in args.url:
+        # Sort by length of regexp, longest first
+        for regexp in sorted(regexp_handlers, key=lambda r: len(r.pattern), reverse=True):
+            if regexp.match(url):
+                args = regexp_handlers[regexp].copy()
+                args[args.index('%u')] = url
+                subprocesses.append(subprocess.Popen(args))
+                break
+else:
+    # Kinda surprised compiled re files are hashable, but this does work
+    args = regexp_handlers.get(re.compile('^.*$'), []).copy()
+    args.remove('%u')
+    subprocesses.append(subprocess.Popen(args))
 
 # Wait for all subprocesses to return
 for p in subprocesses:
