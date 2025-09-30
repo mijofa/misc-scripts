@@ -42,7 +42,7 @@ if args.url:
     for url in args.url:
         # Sort by length of regexp, longest first
         for regexp in sorted(regexp_handlers, key=lambda r: len(r.pattern), reverse=True):
-            if regexp.match(url):
+            if regexp.fullmatch(url):
                 args = regexp_handlers[regexp].copy()
                 args[args.index('%u')] = url
                 subprocesses.append(subprocess.Popen(args))
