@@ -21,7 +21,7 @@ else
     delim_number="8"
     delim_symbol=""
 
-    getopt_string="$(getopt -n "${0##*/}" --options 0Ay --long no-numerals,no-capitalize,symbols -- "$@")" || exit $?
+    getopt_string="$(getopt -n "${0##*/}" --options n0cAy1 --long numerals,no-numerals,capitalize,no-capitalize,symbols -- "$@")" || exit $?
     declare -a "getopt_array=($getopt_string)"
     set -- "${getopt_array[@]}"
 
@@ -29,9 +29,12 @@ else
       case "$1" in
         # FIXME: -y -0 will result in no delimiters at all
         -0 | --no-numerals)   delim_number=""     ; shift   ;;
+        -n | --numerals)                            shift   ;;  # FIXME: Confirm we aren't setting both of these.
         -A | --no-capitalize) case="lower"        ; shift   ;;
+        -c | --capitalize)                          shift   ;;  # FIXME: Confirm we aren't setting both of these.
+        -1)                                         shift   ;;  # FIXME: Should we not do this by default?
         # Include some "special" symbols if told to
-        -y | --symbols)       delim_symbol+="#"   ; shift 2 ;;
+        -y | --symbols)       delim_symbol+="#"   ; shift   ;;
         --) shift; break ;;
         # This should not be possible because it will be caught by the `exit $?` on getopt above.
         # NOTE: This error doesn't look the same as getopt's error above, but this will quote better.
