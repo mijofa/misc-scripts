@@ -1,6 +1,7 @@
 [Unit]
 Description=Reload GPG stubs on Yubikey hotplug
-After=gpg-agent.socket
+PartOf=gpg-agent.socket gpg-agent.service smartcard.target
+After=gpg-agent.socket gpg-agent.service
 StopWhenUnneeded=true
 
 [Service]
