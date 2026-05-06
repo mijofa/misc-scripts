@@ -14,6 +14,13 @@ RemainAfterExit=true
 # FIXME: Is there unintended dangerous consequences in using '--force'?
 ExecStartPre=gpg-connect-agent 'scd serialno' 'learn --force' '/bye'
 
+# # Poke the screensaver so as to turn the screen on
+# ExecStartPre=xdg-screensaver reset
+# That doesn't work, it seems to turn the screen backlights on, but stay blank.
+# It is NOT the same as this bug, although that is the most similar I've found: https://bugzilla.redhat.com/show_bug.cgi?id=1500647
+# This seems to work, but it completely unlocks the screen, without confirming password or smartcard validity
+# ExecStartPre=dbus-send --session --dest=org.gnome.ScreenSaver --type=method_call --print-reply --reply-timeout=20000 /org/gnome/ScreenSaver org.gnome.ScreenSaver.SetActive boolean:false
+
 # Forget PIN when the screen is locked, even if the Yubikey is still plugged in
 ExecStart=bash -c 'gdbus monitor --system --dest org.freedesktop.login1 | grep --fixed-strings --line-buffered "org.freedesktop.DBus.Properties.PropertiesChanged (\'org.freedesktop.login1.Session\', {\'LockedHint\': <true>}, @as [])" | while read line ; do echo RELOADAGENT ; done | gpg-connect-agent --unbuffered'
 
