@@ -18,7 +18,12 @@ ExecStartPre=gpg-connect-agent 'scd serialno' 'learn --force' '/bye'
 ExecStart=bash -c 'gdbus monitor --system --dest org.freedesktop.login1 | grep --fixed-strings --line-buffered "org.freedesktop.DBus.Properties.PropertiesChanged (\'org.freedesktop.login1.Session\', {\'LockedHint\': <true>}, @as [])" | while read line ; do echo RELOADAGENT ; done | gpg-connect-agent --unbuffered'
 
 # Lock the screen when the Yubikey is unplugged
-ExecStop=xdg-screensaver lock
+# Using 'Post' so that systemd doesn't expect this to stop the 'ExecStart=...'
+# Shitty systemctl thing is used to avoid locking screen during service **restarts**
+# I have to restart 'gpg-agent.service' every now and then for annoying reasons,
+# I don't want the screen lock when doing so because it becomes really annoying to debug the issues
+# ref: https://github.com/systemd/systemd/issues/39316
+ExecStopPost=bash -c '[[ "$(systemctl --user show --property JobType --value "$( systemctl --user show --property Job --value %n)")" == "restart" ]] || xdg-screensaver lock'
 
 [Install]
 WantedBy=smartcard.target
